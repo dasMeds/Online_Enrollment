@@ -3,8 +3,8 @@ session_start();
 include('includes/conn.php');
 include('logcheck.php');
 	$stid=$_SESSION['studnum'];
-				$getprofile=mysql_query("SELECT * FROM studenttbl WHERE studnum = '$stid'");
-				$rows=mysql_fetch_array($getprofile);
+				$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE studnum = '$stid'");
+				$rows=mysqli_fetch_array($getprofile);
 				
 if(isset($_POST['reg']))
 		{
@@ -12,7 +12,7 @@ if(isset($_POST['reg']))
 			$values=$_POST['contents'];
 			$units=$_POST['units'];
 			
-				$insertenroll=mysql_query("INSERT INTO student_subject VALUES('','$stid','$values','$units','0')");
+				$insertenroll=mysqli_query($conn, "INSERT INTO student_subject VALUES('','$stid','$values','$units','0')");
 				echo"<script>window.alert('Enrollment form was successfully sent to the system')</script>";
 				echo"<script>window.location='studentindex.php'</script>";
 			
@@ -81,11 +81,11 @@ document.write('<form><input type=button name=print value="Print" onClick="windo
 				$totperlab=0;
 				foreach($_POST['subject'] as $item){
 			
-				$getcodes=mysql_query("SELECT * FROM subjecttbl WHERE subjectcode='$item'");
+				$getcodes=mysqli_query($conn, "SELECT * FROM subjecttbl WHERE subjectcode='$item'");
 			
 				$alltext=$alltext.",".$item;
 
-				$subrow=mysql_fetch_array($getcodes);
+				$subrow=mysqli_fetch_array($getcodes);
 				
 					echo"<tr>";
 						echo"<td align='center'>$subrow[subjectcode]</td>";

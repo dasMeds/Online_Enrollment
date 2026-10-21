@@ -28,17 +28,17 @@ document.write('<form><input type=button name=print value="Print" onClick="windo
               <tbody>
 			  <?php
 			
-				$queryrequest=mysql_query("SELECT * FROM nurse_tbl");
-				while($rowshift=mysql_fetch_array($queryrequest))
+				$queryrequest=mysqli_query($conn, "SELECT * FROM nurse_tbl");
+				while($rowshift=mysqli_fetch_array($queryrequest))
 				{
 				echo	"<tr>";
 				echo	"<td>$rowshift[nurse_num]</td>";
 				echo	"<td>$rowshift[nurse_fname] $rowshift[nurse_minitial]. $rowshift[nurse_lname]</td>";
 				echo	"<td>$rowshift[nurse_department]</td>";
 				
-				$querygetoffs=mysql_query("SELECT * FROM dayoffs WHERE nurse_num='$rowshift[nurse_num]' AND status='1' LIMIT 1");
-				$getoff=mysql_fetch_array($querygetoffs);
-				if(mysql_num_rows($querygetoffs)==0)
+				$querygetoffs=mysqli_query($conn, "SELECT * FROM dayoffs WHERE nurse_num='$rowshift[nurse_num]' AND status='1' LIMIT 1");
+				$getoff=mysqli_fetch_array($querygetoffs);
+				if(mysqli_num_rows($querygetoffs)==0)
 				{
 					echo	"<td>No Assigned Schedules Yet</td>";
 					echo	"</tr>";

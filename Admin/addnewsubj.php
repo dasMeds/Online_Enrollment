@@ -34,7 +34,7 @@
 			$istutorial=0;
 		}
 		
-		$insertquery=mysql_query("INSERT INTO subjecttbl VALUES ('','$scode','$stitle','$numunits','$sroom','$stime','$sday','$sinstructor',$islab,$istutorial,'$sdescription','$course')");
+		$insertquery=mysqli_query($conn, "INSERT INTO subjecttbl VALUES ('','$scode','$stitle','$numunits','$sroom','$stime','$sday','$sinstructor',$islab,$istutorial,'$sdescription','$course')");
 		
 		echo"<script>window.alert('Successfully Created new Subject')</script>";
 		echo"<script>window.location='addnewsubj.php'</script>";

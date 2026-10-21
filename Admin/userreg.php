@@ -76,8 +76,8 @@ include('includes/menu1.php');
               <tbody>
 			  <?php
 			  include('includes/conn.php');
-				$getusers=mysql_query("SELECT * FROM studenttbl");
-				if(mysql_num_rows($getusers)==0)
+				$getusers=mysqli_query($conn, "SELECT * FROM studenttbl");
+				if(mysqli_num_rows($getusers)==0)
 				{
 				echo"<tr>
 						<td colspan ='5' align='center'>
@@ -87,7 +87,7 @@ include('includes/menu1.php');
 				}
 				else
 				{
-				while($getrows=mysql_fetch_array($getusers))
+				while($getrows=mysqli_fetch_array($getusers))
 					{
 					echo"<tr>
 							<td>$getrows[studnum]</td>

@@ -7,14 +7,14 @@ if(isset($_POST['submit']))
 	$username=$_POST['username'];
 	$password=$_POST['password'];
 	
-		$check=mysql_query("SELECT * FROM usertbl WHERE username='$username' AND password='$password' LIMIT 1");
-		if(mysql_num_rows($check)==0)
+		$check=mysqli_query($conn, "SELECT * FROM usertbl WHERE username='$username' AND password='$password' LIMIT 1");
+		if(mysqli_num_rows($check)==0)
 			{
 				echo"<script>window.alert('User doesn't exist please try again.')</script>";
 			}
 		else
 			{
-				while($rowval=mysql_fetch_array($check))
+				while($rowval=mysqli_fetch_array($check))
 					{
 						if($rowval['user_type']=='admin')
 							{
@@ -42,7 +42,7 @@ if(isset($_POST['submit']))
 <head>
 <title>LOGIN PAGE</title>
 
-<link href = "style.css" rel = "stylesheet" type = "text/css"/>
+<link href="styles/style.css" rel="stylesheet" type="text/css"/>
 
 </head>
 <body>
@@ -52,11 +52,11 @@ if(isset($_POST['submit']))
 
 	<div class = "loginForm" align="center">
 	
-	<h1>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspSystem Login</h1>
+	<h1>System Login</h1>
 	
 <form method="POST">	
 <div style="float:left; margin-top: -40px; margin-left: 40px;">
-<img src="logo.jpg" width="160px" width="110px">
+<img src="logo.jpg" alt="Online Enrollment" width="160" height="110">
 </div>
 <div style="margin-left: auto; margin-right: auto;">
 	

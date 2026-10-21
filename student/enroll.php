@@ -6,11 +6,11 @@
 	include('logcheck.php');
 	
 	
-	$getprofile=mysql_query("SELECT * FROM studenttbl WHERE accountID = '$getID'");
-	$rows=mysql_fetch_array($getprofile);
+	$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE accountID = '$getID'");
+	$rows=mysqli_fetch_array($getprofile);
 	
-	$getacc=mysql_query("SELECT * FROM usertbl WHERE ID = '$getID'");
-	$rowacc=mysql_fetch_array($getacc);
+	$getacc=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID = '$getID'");
+	$rowacc=mysqli_fetch_array($getacc);
 	
 		$username=$rowacc['username'];
 		$password=$rowacc['password'];
@@ -89,8 +89,8 @@ include('includes/menu.php');
 						</thead>
 						<tbody>
 							<?php
-								$getsubjects=mysql_query("SELECT * FROM subjecttbl");
-								while($fetchsub=mysql_fetch_array($getsubjects))
+								$getsubjects=mysqli_query($conn, "SELECT * FROM subjecttbl");
+								while($fetchsub=mysqli_fetch_array($getsubjects))
 								{
 									echo"<tr>";
 										echo"<td width='120' align='center'>$fetchsub[subjectcode]</td>";

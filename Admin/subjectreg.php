@@ -77,8 +77,8 @@ include('includes/menu1.php');
               </thead>    
               <tbody>
 					 <?php
-				$getusers=mysql_query("SELECT * FROM subjecttbl");
-				if(mysql_num_rows($getusers)==0)
+				$getusers=mysqli_query($conn, "SELECT * FROM subjecttbl");
+				if(mysqli_num_rows($getusers)==0)
 				{
 				echo"<tr>
 						<td colspan ='4' align='center'>
@@ -88,7 +88,7 @@ include('includes/menu1.php');
 				}
 				else
 				{
-				while($getrows=mysql_fetch_array($getusers))
+				while($getrows=mysqli_fetch_array($getusers))
 					{
 					echo"<tr>
 							<td>$getrows[subjectcode]</td>

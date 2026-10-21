@@ -123,18 +123,17 @@ The system includes sample account data in the SQL script:
 The database connection is defined in `conn.php` and uses a local MySQL setup:
 
 ```php
-mysql_connect("localhost","root","");
-mysql_select_db("online_enroll");
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn = mysqli_connect("localhost", "root", "", "online_enroll");
 ```
 
-Because this is a legacy app, it relies on older deprecated MySQL APIs (`mysql_connect`, `mysql_query`, etc.).
+The application uses procedural `mysqli` calls and requires the PHP `mysqli` extension.
 
 ## Notes
 
 - This project is a school/demo system and is not production-grade.
-- The app uses hardcoded database credentials and legacy SQL functions.
-- It was designed for older PHP/MySQL environments.
-- For a modern upgrade, the code should be migrated to `mysqli` or `PDO` and protected against SQL injection and session issues.
+- The app uses hardcoded local database credentials.
+- Database queries interpolate values directly; use prepared statements and review session handling before production use.
 
 ## Typical Workflow
 

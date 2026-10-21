@@ -2,8 +2,8 @@
 	session_start();
 	include('includes/conn.php');
 	include('logcheck.php');
-	$getquery=mysql_query("SELECT * FROM usertbl WHERE user_type='admin' LIMIT 1");
-	$rowfetch=mysql_fetch_array($getquery);
+	$getquery=mysqli_query($conn, "SELECT * FROM usertbl WHERE user_type='admin' LIMIT 1");
+	$rowfetch=mysqli_fetch_array($getquery);
 	if(isset($_POST['register']))
 	{
 		
@@ -11,7 +11,7 @@
 		$password=$_POST['password'];
 		
 		
-		$insertquery=mysql_query("UPDATE usertbl SET username='$username', password='$password' WHERE user_type='admin' ");
+		$insertquery=mysqli_query($conn, "UPDATE usertbl SET username='$username', password='$password' WHERE user_type='admin' ");
 		
 			echo"<script>window.alert('Successfully updated the admin account')</script>";
 			echo"<script>window.location='userreg.php'</script>";

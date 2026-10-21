@@ -40,13 +40,13 @@
 		$gradaddresslast=$_POST['address2'];
 		
 		
-		$insertquery=mysql_query("INSERT INTO usertbl VALUES ('','$username','$password','$fullname','student')");
+		$insertquery=mysqli_query($conn, "INSERT INTO usertbl VALUES ('','$username','$password','$fullname','student')");
 		
-		$gethighest=mysql_query("SELECT * FROM usertbl ORDER BY ID DESC LIMIT 1");
-		$check=mysql_num_rows($gethighest);
-			while($getid=mysql_fetch_array($gethighest))
+		$gethighest=mysqli_query($conn, "SELECT * FROM usertbl ORDER BY ID DESC LIMIT 1");
+		$check=mysqli_num_rows($gethighest);
+			while($getid=mysqli_fetch_array($gethighest))
 			{
-				$insertstudent=mysql_query("INSERT INTO studenttbl VALUES('','$getid[ID]','$snum','$fname','$minitial','$lname','$address','$cnum','$email','$bdate','$course','$yrlvlsec','$gender',
+				$insertstudent=mysqli_query($conn, "INSERT INTO studenttbl VALUES('','$getid[ID]','$snum','$fname','$minitial','$lname','$address','$cnum','$email','$bdate','$course','$yrlvlsec','$gender',
 				'$fathername','$mothername','$guardianname','$bplace','$civilstatus','$elemschool','$yrelem','$hsschool','$yrgradhs',
 				'$lastschool','$yrlast','$gradaddresslast')");
 			}

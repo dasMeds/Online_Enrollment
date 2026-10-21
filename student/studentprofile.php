@@ -4,11 +4,11 @@
 	$getID=$_SESSION['userID'];
 	include('includes/conn.php');
 	
-	$getprofile=mysql_query("SELECT * FROM studenttbl WHERE accountID = '$getID'");
-	$rows=mysql_fetch_array($getprofile);
+	$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE accountID = '$getID'");
+	$rows=mysqli_fetch_array($getprofile);
 	
-	$getacc=mysql_query("SELECT * FROM usertbl WHERE ID = '$getID'");
-	$rowacc=mysql_fetch_array($getacc);
+	$getacc=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID = '$getID'");
+	$rowacc=mysqli_fetch_array($getacc);
 	
 		$username=$rowacc['username'];
 		$password=$rowacc['password'];

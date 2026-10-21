@@ -4,18 +4,18 @@
 	$getID=$_SESSION['userID'];
 	include('includes/conn.php');
 	include('logcheck.php');
-	$getprofile=mysql_query("SELECT * FROM studenttbl WHERE accountID = '$getID'");
-	$rows=mysql_fetch_array($getprofile);
+	$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE accountID = '$getID'");
+	$rows=mysqli_fetch_array($getprofile);
 	
-	$getacc=mysql_query("SELECT * FROM usertbl WHERE ID= '$getID'");
-	$rowaccs=mysql_fetch_array($getacc);
+	$getacc=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID= '$getID'");
+	$rowaccs=mysqli_fetch_array($getacc);
 	
 	
 	if(isset($_POST['cpass']))
 	{
 		$oldpass=$_POST['opassword'];
-		$checkpass=mysql_query("SELECT * FROM usertbl WHERE ID= '$getID' AND password='$oldpass'");
-		if(mysql_num_rows($checkpass)==0)
+		$checkpass=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID= '$getID' AND password='$oldpass'");
+		if(mysqli_num_rows($checkpass)==0)
 		{
 			echo"<script>window.alert('Inputted password is wrong please try again')</script>";
 		}
@@ -24,7 +24,7 @@
 			if($_POST['password']==$_POST['password2'])
 			{
 				$newpass=$_POST['password'];
-				$updatepass=mysql_query("UPDATE usertbl SET password='$newpass' WHERE ID='$getID'");
+				$updatepass=mysqli_query($conn, "UPDATE usertbl SET password='$newpass' WHERE ID='$getID'");
 				echo"<script>window.alert('Successfully updated the password')</script>";
 				echo"<script>window.location='studentprofile.php')</script>";
 			}

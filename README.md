@@ -102,21 +102,25 @@ The system includes sample account data in the SQL script:
 
 ## Setup Instructions
 
-1. Install Apache + PHP + MySQL.
-2. Start the MySQL service.
-3. Create a database named `online_enroll`.
-4. Import the SQL dump file:
+1. Install XAMPP (or another Apache, PHP, and MySQL distribution).
+2. Start both **Apache** and **MySQL** from the XAMPP Control Panel.
+3. Open phpMyAdmin at `http://localhost/phpmyadmin`.
+4. Create a database named `online_enroll`. The name must match the one configured in the PHP connection files.
+5. Select `online_enroll` in phpMyAdmin, open the **Import** tab, choose `online_enroll (2).sql` from the project folder, and click **Import** or **Go**. The dump contains the tables and sample data but does not create the database itself.
+
+   Alternatively, from the project folder, import it using the MySQL command-line client:
    ```bash
    mysql -u root -p online_enroll < "online_enroll (2).sql"
    ```
-5. Place the project folder in your web server root, such as:
+   Enter your MySQL root password when prompted. For a default XAMPP installation where the root account has no password, omit `-p`.
+6. Place the project folder in your web server root, such as:
    - `htdocs` for XAMPP
    - `www` for WAMP
-6. Open the project in a browser:
+7. Open the project in a browser:
    ```text
    http://localhost/Online_Enrollment/
    ```
-7. Log in with one of the sample accounts above.
+8. Log in with one of the sample accounts above.
 
 ## Database Connection
 
@@ -128,6 +132,14 @@ $conn = mysqli_connect("localhost", "root", "", "online_enroll");
 ```
 
 The application uses procedural `mysqli` calls and requires the PHP `mysqli` extension.
+The root, Admin, and student connection files currently use the local MySQL settings shown above. If your MySQL username, password, host, or database name differs, update the connection settings in all three files.
+
+### Troubleshooting
+
+- **`Unknown database 'online_enroll'`**: MySQL is running, but the database has not been created. Create `online_enroll` in phpMyAdmin, then import `online_enroll (2).sql` into it.
+- **Connection refused or cannot connect**: Confirm that MySQL is running in the XAMPP Control Panel and that the host and port in the connection settings are correct.
+- **Access denied**: Check the MySQL username and password in the connection files.
+- **Missing tables after creating the database**: Import the SQL dump into the `online_enroll` database; creating the database alone does not add its tables or sample accounts.
 
 ## Notes
 

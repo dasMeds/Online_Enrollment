@@ -1,14 +1,15 @@
 <?php
-session_start();
 include('logcheck.php');
+$flash = isset($_SESSION['flash_success']) ? $_SESSION['flash_success'] : '';
+unset($_SESSION['flash_success']);
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>John Paul College</title>
-
-<link href = "style.css" rel = "stylesheet" type = "text/css"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administrator Dashboard | John Paul College</title>
+<link href="style.css" rel="stylesheet" type="text/css">
 </head>
 
 <body>
@@ -28,16 +29,15 @@ include('includes/menu1.php');
 
 <div id="main">
 	<div class="shell">
+		<?php if ($flash !== '') { ?><p class="form-success" role="status"><?php echo app_h($flash); ?></p><?php } ?>
 		<!-- Box -->
 		<div class="box">
 			<h2>Welcome to Admin</h2>
 			
 			<div class="entry">
-				 <p><b>John Paul College</b></font></p>
-		<br><b>Mission:</b></font>
-        <p> A center of learning and academic excellence in the Province of Oriental Mindoro</p>
-        <br><b>Vision:</b></font>
-        <p>John Paul College is committed to achieve lasting improvements in education and in the lives of the people by producing students who have the ability to think critically, create, lead, compete and excel towards full development of the family, community and global environment</p>
+				<p><strong>John Paul College</strong></p>
+				<p><strong>Mission:</strong> A center of learning and academic excellence in the Province of Oriental Mindoro.</p>
+				<p><strong>Vision:</strong> John Paul College is committed to improving education and the lives of people by preparing students to think critically, create, lead, compete, and contribute to their communities.</p>
 			</div>
 			
 		</div>
@@ -52,22 +52,22 @@ include('includes/menu1.php');
 					<ul>
 						<li>
 							<div class="post-image">
-								<a href="#"><img src="news1.jpg" width='90' height='70' alt="" /></a>
+								<img src="news1.jpg" width="90" height="70" alt="College campus event">
 							</div>
 							<div class="post-data">
-								<h5><a href="#">September 11th, 2010</a></h5>
-								<p>Nam scelerisque mi ut leo eleifend imperdiet. Donec at molestie diam. Etiam quam nisi, elementum sed commodo, posuere <a href="#">&hellip;</a></p>
+								<h5>Academic Year 2026-2027</h5>
+								<p>Check with the registrar for current academic announcements and enrollment dates.</p>
 							</div>
 							<div class="cl">&nbsp;</div>
 						</li>
 						
 						<li class="last">
 							<div class="post-image">
-								<a href="#"><img src="news2.jpg" width='90' height='70'  alt="" /></a>
+								<img src="news2.jpg" width="90" height="70" alt="Student activities">
 							</div>
 							<div class="post-data">
-								<h5><a href="#">September 10th, 2010</a></h5>
-								<p>Nam scelerisque mi ut leo eleifend imperdiet. Donec at molestie diam. Etiam quam nisi, elementum sed commodo, posuere <a href="#">&hellip;</a></p>
+								<h5>Enrollment Updates | 2026</h5>
+								<p>Use the administrator tools to review student accounts, schedules, and submitted enrollment forms.</p>
 							</div>
 							<div class="cl">&nbsp;</div>
 						</li>
@@ -77,7 +77,7 @@ include('includes/menu1.php');
 			</div>
 			
 			<div class="buttons">
-				<a href="#" class="button"><span>Read More</span></a>
+				<a href="report.php" class="button"><span>View enrollment report</span></a>
 			</div>
 		</div>
 		<!-- /Box -->
@@ -87,12 +87,12 @@ include('includes/menu1.php');
 			
 			<div class="entry bullet-list">
 				<ul>
-					  <li><a href="#">CHED COURSES</a></li>
-	                    <li><a href="#">TESDA COURSES</a></li>
+					  <li>CHED programs</li>
+	                    <li>TESDA programs</li>
 				</ul>
 				<div class="post-image">
-								<a href="#"><img src="news3.jpg" width='100' height='100' alt="" /></a>
-								<a href="#"><img src="news4.jpg" width='100' height='100' alt="" /></a>
+								<img src="news3.jpg" width="100" height="100" alt="Academic program information">
+								<img src="news4.jpg" width="100" height="100" alt="College campus">
 							</div>
 			</div>
 		
@@ -117,7 +117,7 @@ include('includes/menu2.php');
 		
 		<!-- Copyrights --> 
 		<p class="right"> 
-			Copyright 2014 | Online Enrollment
+			Copyright 2026 | Online Enrollment
 		</p> 
 		<!-- /Copyrights --> 
 		

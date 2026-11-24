@@ -1,173 +1,86 @@
 <?php
-	session_start();
-	include('logcheck.php');
-	if(isset($_POST['register']))
-	{
-		include('includes/conn.php');
-		
-		$course=$_POST['course'];
-		$stitle=$_POST['stitle'];
-		$scode=$_POST['scode'];
-		$sdescription=$_POST['cdescription'];
-		$numunits=$_POST['numunits'];
-		
-		$sroom=$_POST['sroom'];
-		$stime=$_POST['stime'];
-		$sday=$_POST['sday'];
-		$sinstructor=$_POST['sinstructor'];
-		
-		if(isset($_POST['islab']))
-		{
-			$islab=1;
+require_once __DIR__ . '/includes/conn.php';
+require_once __DIR__ . '/logcheck.php';
+
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
+	app_verify_csrf();
+	$course = app_input('course');
+	$semester = app_input('semester');
+	$stitle = trim(app_input('stitle'));
+	$scode = trim(app_input('scode'));
+	$sdescription = trim(app_input('cdescription'));
+	$numunits = app_int_input('numunits');
+	$sroom = trim(app_input('sroom'));
+	$stime = trim(app_input('stime'));
+	$sday = trim(app_input('sday'));
+	$sinstructor = trim(app_input('sinstructor'));
+	$islab = isset($_POST['islab']) ? 1 : 0;
+	$istutorial = isset($_POST['istutorial']) ? 1 : 0;
+
+	$lengthLimits = array(array($scode, 30), array($stitle, 150), array($sroom, 100), array($stime, 100), array($sinstructor, 150), array($sday, 50));
+	foreach ($lengthLimits as $field) {
+		if (strlen($field[0]) > $field[1]) {
+			$error = 'One or more subject fields exceed the allowed length.';
+			break;
 		}
-		else
-		{
-			$islab=0;
-		}
-	
-		if(isset($_POST['istutorial']))
-		{
-			$istutorial=1;
-		}
-		else
-		{
-			$istutorial=0;
-		}
-		
-		$insertquery=mysqli_query($conn, "INSERT INTO subjecttbl VALUES ('','$scode','$stitle','$numunits','$sroom','$stime','$sday','$sinstructor',$islab,$istutorial,'$sdescription','$course')");
-		
-		echo"<script>window.alert('Successfully Created new Subject')</script>";
-		echo"<script>window.location='addnewsubj.php'</script>";
 	}
-	
-	
+	if ($error === '' && (!array_key_exists($course, app_course_options()) || !in_array($semester, array('1st Semester', '2nd Semester', 'Summer'), true) || $scode === '' || $stitle === '' || $numunits < 1 || $numunits > 6)) {
+		$error = 'Enter a valid course, semester, subject code, title, and unit count.';
+	}
+	if ($error === '') {
+		try {
+			$insert = $conn->prepare('INSERT INTO subjecttbl (subjectcode, subjecttitle, numofunits, room, time, instructor, day, islab, istutorial, description, course_con, semester) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+			$insert->bind_param('ssissssiiiss', $scode, $stitle, $numunits, $sroom, $stime, $sinstructor, $sday, $islab, $istutorial, $sdescription, $course, $semester);
+			$insert->execute();
+			$_SESSION['flash_success'] = 'Subject added.';
+			header('Location: subjectreg.php');
+			exit;
+		} catch (mysqli_sql_exception $exception) {
+			error_log('Subject creation failed: ' . $exception->getMessage());
+			$error = 'The subject could not be saved. Check that the subject code is not already in use.';
+		}
+	}
+}
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>John Paul College</title>
-
-
-<link href = "style.css" rel = "stylesheet" type = "text/css"/>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add Subject | John Paul College</title>
+<link href="style.css" rel="stylesheet" type="text/css">
 </head>
-
 <body>
-
-<div class='header'>
-</div>
-	
-<nav class='container'>
-	<?php
-include('includes/menu1.php');
-?>
-</nav>
-
-
-
-
-
-<div id="main">
+<div class="header"></div>
+<nav class="container" aria-label="Administrator navigation"><?php include __DIR__ . '/includes/menu1.php'; ?></nav>
+<main id="main">
 	<div class="shell">
-	<center>
-	<form class='cmxform' method='POST'>
-	<fieldset>
-			<legend>Course Details</legend>
-			  <ol>
-			  <li>
-				  <label for="name">Select Course:<em>*</em></label>
-				  <select name='course'>
-					<option value='bsit'>BSIT</option>
-				  </select>
-				
-  </ol>
-			
-	</fieldset>
-	
-	<fieldset>	
-			  <legend>Subject Details</legend>
-			  <ol>
-			  <li>
-					<table>
-						<tr>
-							<td>Subject Code:</td><td align='left'><input type='text' required='required' maxlength='50' id="name" name='scode' /></td>
-						</tr>
-						<tr>
-							<td>Subject Title:</td><td align='left'><input type='text' required='required' id="name" name='stitle' /></td>
-						</tr>
-						<tr>
-							<td>Number of Units:</td><td align='left'><select name='numunits'>
-														<option value='1'>1</option>
-														<option value='2'>2</option>
-														<option value='3'>3</option>
-														<option value='4'>4</option>
-														<option value='5'>5</option>
-														<option value='6'>6</option></select></td>
-						</tr>
-						<tr>
-							<td><label>Subject Description:</label></td><td align='left'><textarea name='cdescription'></textarea></td>
-						</tr>
-						<tr>
-							<td><label>Room:</label></td><td align='left'><input type='text' required='required' id="name" name='sroom' /></td>
-						</tr>
-						<tr>
-							<td><label>Day:</label></td><td align='left'><input type='text' required='required' id="name" name='sday' /></td>
-						</tr>
-						<tr>
-							<td><label>Time:</label></td><td align='left'><input type='text' required='required' id="name" name='stime' /></td>
-						</tr>
-						<tr>
-							<td><label>Instructor:</label></td><td align='left'><input type='text' required='required' id="name" name='sinstructor' /></td>
-						</tr>
-						<tr>
-							<td><label>With Lab:</label></td><td align='left'><input type='checkbox' name='islab'></td>
-						</tr>
-						<tr>
-							<td><label>With Tutorial:</label></td><td align='left'><input type='checkbox' name='istutorial'></td>
-						</tr>
-					</table>
-					
-				</li>
-						
-				
-			 
-			  
-			  
-  </ol>
-</fieldset>
-<div align='center'><input type='submit' name='register' value='Add new subject'>&nbsp;&nbsp;
-<input type='reset' name='clear' value='Clear'></div>
-</form>
-</center>
+		<h1>Add Subject</h1>
+		<?php if ($error !== '') { ?><p class="form-error" role="alert"><?php echo app_h($error); ?></p><?php } ?>
+		<form class="cmxform" method="post">
+			<input type="hidden" name="csrf_token" value="<?php echo app_h(app_csrf_token()); ?>">
+			<fieldset>
+				<legend>Subject details</legend>
+				<div class="field-grid">
+					<label for="course">Course<select id="course" name="course" required><?php foreach (app_course_options() as $courseCode => $courseTitle) { ?><option value="<?php echo app_h($courseCode); ?>"><?php echo app_h(strtoupper($courseCode) . ' - ' . $courseTitle); ?></option><?php } ?></select></label>
+					<label for="semester">Semester<select id="semester" name="semester" required><option value="1st Semester">1st Semester</option><option value="2nd Semester">2nd Semester</option><option value="Summer">Summer</option></select></label>
+					<label for="scode">Subject code<input id="scode" name="scode" maxlength="30" required></label>
+					<label for="stitle">Subject title<input id="stitle" name="stitle" maxlength="150" required></label>
+					<label for="numunits">Units<select id="numunits" name="numunits" required><?php for ($units = 1; $units <= 6; $units++) { ?><option value="<?php echo $units; ?>"><?php echo $units; ?></option><?php } ?></select></label>
+					<label for="sroom">Room<input id="sroom" name="sroom" maxlength="100"></label>
+					<label for="sday">Day<input id="sday" name="sday" maxlength="50"></label>
+					<label for="stime">Time<input id="stime" name="stime" maxlength="100"></label>
+					<label for="sinstructor">Instructor<input id="sinstructor" name="sinstructor" maxlength="150"></label>
+					<label for="cdescription">Description<textarea id="cdescription" name="cdescription"></textarea></label>
+				</div>
+				<label class="check-label"><input type="checkbox" name="islab" value="1"> Includes lab fee</label>
+				<label class="check-label"><input type="checkbox" name="istutorial" value="1"> Includes tutorial fee</label>
+			</fieldset>
+			<button type="submit" name="register" value="1">Add subject</button>
+		</form>
 	</div>
-	<div><br></div>
-</div>
-<!-- /Main -->
-
-<!-- Footer -->
-<div id="footer">
-	<div class="shell">
-		<!-- Mini Nav --> 
-		<div class="footer-navigation"> 
-			<?php
-include('includes/menu2.php');
-?>
-		</div> 
-		<!-- /Mini Nav --> 
-		
-		<!-- Copyrights --> 
-		<p class="right"> 
-			Copyright 2014 | Online Enrollment
-		</p> 
-		<!-- /Copyrights --> 
-		
-		<div class="cl">&nbsp;</div> 
-	</div>
-</div>
-
-
-
-
+</main>
+<footer id="footer"><div class="shell"><?php include __DIR__ . '/includes/menu2.php'; ?></div></footer>
 </body>
 </html>

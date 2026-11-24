@@ -1,123 +1,68 @@
 <?php
-	session_start();
-	
-	$getID=$_SESSION['userID'];
-	include('includes/conn.php');
-	include('logcheck.php');
-	$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE accountID = '$getID'");
-	$rows=mysqli_fetch_array($getprofile);
-	
-	$getacc=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID= '$getID'");
-	$rowaccs=mysqli_fetch_array($getacc);
-	
-	
-	if(isset($_POST['cpass']))
-	{
-		$oldpass=$_POST['opassword'];
-		$checkpass=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID= '$getID' AND password='$oldpass'");
-		if(mysqli_num_rows($checkpass)==0)
-		{
-			echo"<script>window.alert('Inputted password is wrong please try again')</script>";
-		}
-		else
-		{
-			if($_POST['password']==$_POST['password2'])
-			{
-				$newpass=$_POST['password'];
-				$updatepass=mysqli_query($conn, "UPDATE usertbl SET password='$newpass' WHERE ID='$getID'");
-				echo"<script>window.alert('Successfully updated the password')</script>";
-				echo"<script>window.location='studentprofile.php')</script>";
-			}
-		}
+require_once __DIR__ . '/includes/conn.php';
+require_once __DIR__ . '/logcheck.php';
+
+$error = '';
+$success = '';
+$accountId = (int)$_SESSION['userID'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cpass'])) {
+	app_verify_csrf();
+	$oldPassword = app_input('opassword');
+	$newPassword = app_input('password');
+	$confirmPassword = app_input('password2');
+	$statement = $conn->prepare('SELECT password FROM usertbl WHERE ID = ? AND user_type = "student"');
+	$statement->bind_param('i', $accountId);
+	$statement->execute();
+	$account = $statement->get_result()->fetch_assoc();
+
+	if (!$account || !(password_verify($oldPassword, $account['password']) || hash_equals($account['password'], $oldPassword))) {
+		$error = 'The current password is incorrect.';
+	} elseif (strlen($newPassword) < 12 || strlen($newPassword) > 72) {
+		$error = 'The new password must be between 12 and 72 characters.';
+	} elseif (!hash_equals($newPassword, $confirmPassword)) {
+		$error = 'The new password entries do not match.';
+	} else {
+		$hash = password_hash($newPassword, PASSWORD_DEFAULT);
+		$update = $conn->prepare('UPDATE usertbl SET password = ? WHERE ID = ? AND user_type = "student"');
+		$update->bind_param('si', $hash, $accountId);
+		$update->execute();
+		session_regenerate_id(true);
+		$success = 'Password updated successfully.';
+		unset($_SESSION['csrf_token']);
 	}
+}
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>John Paul College</title>
-
-
-<link href = "style.css" rel = "stylesheet" type = "text/css"/>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change Password | John Paul College</title>
+<link href="style.css" rel="stylesheet" type="text/css">
 </head>
-
 <body>
-
-<div class='header'>
-</div>
-	
-<nav class='container'>
-<?php
-include('includes/menu.php');
-?>
-</nav>
-
-
-
-
-
-<div id="main">
+<div class="header"></div>
+<nav class="container" aria-label="Student navigation"><?php include __DIR__ . '/includes/menu.php'; ?></nav>
+<main id="main">
 	<div class="shell">
-	<center>
-	<form class='cmxform' method='POST'>
-	<fieldset>
-			<legend><h4>Account Details</h4></legend>
-			  <ol>
-			  <li>
-			  <table>
-			  <tr>
-				<td align='right'><label for="name" > Input Old Password: </label></td>
-				<td><input type='password' name='opassword'></td>
-			  </tr>
-			  <tr>
-				<td align='right'><label for="name" > Input New Password: </label></td>
-				<td><input type='password' name='password'></td>
-			  </tr>
-			  <tr>
-				<td align='right'><label for="name"> Input Password Again: </label></td>
-				<td><input type='password' name='password2'></td>
-			  </tr>
-					</table>
-				</li>
-				
-  </ol>
-			
-	</fieldset>
-	<br>
-	
-<div align='center'><input type='submit' name='cpass' value='Change Password'>&nbsp;&nbsp;
-<input type='reset' name='clear' value='Clear'></div>
-</form>
-</center>
+		<h1>Change Password</h1>
+		<?php if ($error !== '') { ?><p class="form-error" role="alert"><?php echo app_h($error); ?></p><?php } ?>
+		<?php if ($success !== '') { ?><p class="form-success" role="status"><?php echo app_h($success); ?></p><?php } ?>
+		<form class="cmxform" method="post">
+			<input type="hidden" name="csrf_token" value="<?php echo app_h(app_csrf_token()); ?>">
+			<fieldset>
+				<legend>Verify your identity</legend>
+				<label for="opassword">Current password</label>
+				<input id="opassword" type="password" name="opassword" autocomplete="current-password" required>
+				<label for="password">New password (12-72 characters)</label>
+				<input id="password" type="password" name="password" minlength="12" maxlength="72" autocomplete="new-password" required>
+				<label for="password2">Confirm new password</label>
+				<input id="password2" type="password" name="password2" minlength="12" maxlength="72" autocomplete="new-password" required>
+				<button type="submit" name="cpass" value="1">Change password</button>
+			</fieldset>
+		</form>
 	</div>
-	<div><br></div>
-</div>
-<!-- /Main -->
-
-<!-- Footer -->
-<div id="footer">
-	<div class="shell">
-		<!-- Mini Nav --> 
-		<div class="footer-navigation"> 
-		<?php
-			include('includes/menu2.php');
-		?>
-		</div> 
-		<!-- /Mini Nav --> 
-		
-		<!-- Copyrights --> 
-		<p class="right"> 
-			Copyright 2014 | Online Enrollment
-		</p> 
-		<!-- /Copyrights --> 
-		
-		<div class="cl">&nbsp;</div> 
-	</div>
-</div>
-
-
-
-
+</main>
+<footer id="footer"><div class="shell"><?php include __DIR__ . '/includes/menu2.php'; ?></div></footer>
 </body>
 </html>

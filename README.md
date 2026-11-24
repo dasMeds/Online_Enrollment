@@ -1,164 +1,88 @@
 # Online Enrollment System
 
-A legacy PHP-based online enrollment portal for a college or school. The system allows students to register, view their profile, and submit enrollment forms, while administrators can manage accounts, subjects, and course-related records.
+A procedural PHP/MySQL application for student enrollment and administrator management. Existing page entry points and the `Admin/`, `student/`, `styles/`, and SQL file layout are retained.
 
-This project was built around a MySQL database and classic PHP scripts, with separate sections for admin and student access.
+## Features
 
-## Project Overview
+- Role-checked administrator and student sessions
+- Student account creation, profile editing, password changes, subject selection, enrollment submission, and enrollment history
+- Administrator management of student accounts, subjects, sections, and schedules, plus enrollment reports
+- Prepared database operations, CSRF checks on state-changing forms, escaped dynamic output, and transactional account/enrollment writes
+- Responsive admin/student styles; the college photography/banner assets remain raster, while action icons use inline SVG
 
-The application includes two primary user roles:
+## Requirements
 
-- Admin: manages users and academic records
-- Student: logs in, views profile info, and enrolls in subjects
+- PHP 8.0+ with `mysqli` and `mysqlnd`
+- MySQL 8.0.16+ or a recent MariaDB version that enforces `CHECK` constraints
+- Apache or another PHP-capable web server
 
-The app is designed around a local web server environment using Apache/PHP and MySQL.
+## Install
 
-## Main Features
+1. Copy the project directory into the web root (for example `C:\xampp\htdocs\Online_Enrollment`).
+2. Start Apache and MySQL.
+3. Import `online_enroll (2).sql` into an empty MySQL/MariaDB instance. The script creates and selects `online_enroll` if needed:
 
-### Student Features
-- User login
-- Student dashboard
-- View personal profile
-- Change password
-- Select subjects for enrollment
-- Generate and submit an enrollment form
-- Review semester and course information
+   ```sh
+   mysql -u root -p < "online_enroll (2).sql"
+   ```
 
-### Admin Features
-- Admin login
-- Dashboard homepage for administrators
-- Manage users and student accounts
-- Add new subjects
-- Add and manage course-related sections
-- View reports and account information
+   For a local XAMPP root account with no password, omit `-p`.
+4. Configure the database for the PHP process using environment variables:
+   - `ONLINE_ENROLL_DB_HOST` (default `localhost`)
+   - `ONLINE_ENROLL_DB_PORT` (default `3306`)
+   - `ONLINE_ENROLL_DB_NAME` (default `online_enroll`)
+   - `ONLINE_ENROLL_DB_USER` (default `root`)
+   - `ONLINE_ENROLL_DB_PASS` (default empty; local development only)
+5. Browse to `http://localhost/Online_Enrollment/`.
 
-## Tech Stack
+The SQL uses `CREATE TABLE IF NOT EXISTS` and does not drop existing tables. It is intended for a **fresh/empty database**: it does not migrate an older MyISAM schema. Back up existing data and plan a separate migration before using it with an existing installation.
 
-- PHP (legacy procedural style)
-- MySQL
-- HTML/CSS
-- JavaScript/jQuery (used in some pages)
+For an existing legacy database, back it up and run [`migrate_enrollment_history.sql`](./migrate_enrollment_history.sql). It adds missing enrollment, subject-semester, and schedule fields without dropping submissions; legacy enrollment dates and unassigned subject terms remain marked as legacy. Legacy subjects are preserved and remain available through the Subjects page's Legacy filter, but are excluded from the default catalog listing. It also corrects the two known placeholder demo titles. This migration supports MariaDB 10.4+.
 
-## Project Structure
+### Included catalog and mock data
 
-```text
-Online_Enrollment/
-├── Admin/
-│   ├── addnewsched.php
-│   ├── addnewsection.php
-│   ├── addnewsubj.php
-│   ├── addnewuser.php
-│   ├── adminindex.php
-│   ├── adminedit.php
-│   ├── deletecurrsubj.php
-│   ├── deletecurruser.php
-│   ├── logcheck.php
-│   ├── style.css
-│   ├── subjectreg.php
-│   ├── userreg.php
-│   ├── css/
-│   ├── includes/
-│   └── js/
-├── student/
-│   ├── changepass.php
-│   ├── enroll.php
-│   ├── logcheck.php
-│   ├── showsubs.php
-│   ├── studentindex.php
-│   ├── studentprofile.php
-│   ├── style.css
-│   ├── includes/
-│   └── js/
-├── styles/
-├── conn.php
-├── index.php
-├── logo.jpg
-├── online_enroll (2).sql
-└── README.md
+The fresh-install SQL seeds 10 distinct subjects for each of 10 programs (100 subjects total), distributed across 1st Semester, 2nd Semester, and Summer. The programs are BSIT, BSCS, BSBA, BSA, BSED, BSCE, BSN, BSHM, BSPSY, and BSARCH; each has five first-semester subjects, four second-semester subjects, and one summer practicum or internship. Subject codes are globally unique. The seed includes 10 programs, 14 accounts (2 administrators and 12 students), 12 complete student profiles across all 10 programs, 12 sections, 100 conflict-free weekly schedule entries, 12 sample enrollments (pending and approved), and 32 subject-enrollment links. Seed inserts are safe to re-run and subject management supports course/semester filters, search, and pagination.
+
+### Repair an older password column
+
+Older installs may still have `usertbl.password VARCHAR(11)`, which truncates password hashes. Back up the database, then widen the column:
+
+```sql
+ALTER TABLE usertbl MODIFY password VARCHAR(255) NOT NULL;
 ```
 
-## Database
+If a previous login already truncated the demo hashes, they cannot be recovered. For the demo accounts only, reset the values below; the next successful login will hash them. Do not use this reset on real accounts:
 
-The application uses a MySQL database named `online_enroll`.
-
-The SQL dump file `online_enroll (2).sql` contains the schema and sample data. Key tables include:
-
-- `usertbl`
-- `studenttbl`
-- `subjecttbl`
-- `student_subject`
-- `sections_tbl`
-- `sched_tbl`
-- `courses_tbl`
-
-## Default Accounts
-
-The system includes sample account data in the SQL script:
-
-- Admin username: `admins`
-- Admin password: `admins`
-- Student username: `dennis`
-- Student password: `123456`
-
-## Setup Instructions
-
-1. Install XAMPP (or another Apache, PHP, and MySQL distribution).
-2. Start both **Apache** and **MySQL** from the XAMPP Control Panel.
-3. Open phpMyAdmin at `http://localhost/phpmyadmin`.
-4. Create a database named `online_enroll`. The name must match the one configured in the PHP connection files.
-5. Select `online_enroll` in phpMyAdmin, open the **Import** tab, choose `online_enroll (2).sql` from the project folder, and click **Import** or **Go**. The dump contains the tables and sample data but does not create the database itself.
-
-   Alternatively, from the project folder, import it using the MySQL command-line client:
-   ```bash
-   mysql -u root -p online_enroll < "online_enroll (2).sql"
-   ```
-   Enter your MySQL root password when prompted. For a default XAMPP installation where the root account has no password, omit `-p`.
-6. Place the project folder in your web server root, such as:
-   - `htdocs` for XAMPP
-   - `www` for WAMP
-7. Open the project in a browser:
-   ```text
-   http://localhost/Online_Enrollment/
-   ```
-8. Log in with one of the sample accounts above.
-
-## Database Connection
-
-The database connection is defined in `conn.php` and uses a local MySQL setup:
-
-```php
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-$conn = mysqli_connect("localhost", "root", "", "online_enroll");
+```sql
+UPDATE usertbl SET password = 'admins' WHERE username = 'admins' AND user_type = 'admin';
+UPDATE usertbl SET password = '123456' WHERE username = 'dennis' AND user_type = 'student';
 ```
 
-The application uses procedural `mysqli` calls and requires the PHP `mysqli` extension.
-The root, Admin, and student connection files currently use the local MySQL settings shown above. If your MySQL username, password, host, or database name differs, update the connection settings in all three files.
+## Demo accounts
 
-### Troubleshooting
+| Role | Username | Initial password |
+|---|---|---|
+| Administrator | `admins` | `admins` |
+| Administrator | `registrar` | `Registrar!2026` |
+| Student | `dennis` | `123456` |
+| Other mock students | See usernames in the SQL seed | `Student!2026` |
 
-- **`Unknown database 'online_enroll'`**: MySQL is running, but the database has not been created. Create `online_enroll` in phpMyAdmin, then import `online_enroll (2).sql` into it.
-- **Connection refused or cannot connect**: Confirm that MySQL is running in the XAMPP Control Panel and that the host and port in the connection settings are correct.
-- **Access denied**: Check the MySQL username and password in the connection files.
-- **Missing tables after creating the database**: Import the SQL dump into the `online_enroll` database; creating the database alone does not add its tables or sample accounts.
+These are educational/demo credentials and must be changed before deployment. Seeded passwords are stored as PHP `password_hash()` values. New passwords must be 12-72 characters (the upper bound avoids bcrypt truncation on PHP installations using it as `PASSWORD_DEFAULT`). Do not expose the demo database to the internet.
 
-## Notes
+## Data and security notes
 
-- This project is a school/demo system and is not production-grade.
-- The app uses hardcoded local database credentials.
-- Database queries interpolate values directly; use prepared statements and review session handling before production use.
+- Database access is centralized in `conn.php`; the Admin and Student include paths delegate to it.
+- The default empty-password local database credentials are for XAMPP development only. Use a least-privilege database account and environment variables outside a local machine.
+- Enrollment selections are looked up again on the server and written atomically with related subject IDs. Database foreign keys protect account, course, section, schedule, and enrollment relationships.
+- Student and administrator routes enforce their respective session roles; delete operations require POST, a CSRF token, and confirmation.
+- Configure HTTPS in production so session cookies are marked `Secure`.
 
-## Typical Workflow
+## Validation
 
-1. User opens the login page from `index.php`.
-2. The login script checks `usertbl` for the username and password.
-3. Based on `user_type`, the user is redirected to either the admin area or the student area.
-4. Students can view profile data and select subjects for enrollment.
-5. Selected subjects are stored in `student_subject` and can be submitted as an enrollment form.
+Check PHP syntax from the repository root:
 
-## License
+```sh
+Get-ChildItem -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
+```
 
-This project is for educational use and appears to be a class assignment or demo application.
-
-## Summary
-
-This repository is a compact enrollment management system for a college environment, built with classic PHP and MySQL, and structured around admin and student workflows. It is useful as a learning project or a starting point for a modern enrollment portal.
+End-to-end tests require a running MySQL/MariaDB instance with the schema imported.

@@ -1,4 +1,3 @@
 <?php
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-$conn = mysqli_connect("localhost", "root", "", "online_enroll");
+require_once dirname(__DIR__, 2) . '/conn.php';
 ?>

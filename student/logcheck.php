@@ -1,16 +1,9 @@
 <?php
-	if(isset($_SESSION['logcheck']))
-	{
-		$authorize=1;
-	}
-	else
-	{
-		$authorize=0;
-	}
-	
-	if($authorize==0)
-	{
-		echo"<script>window.location='../index.php'</script>";
-	}
-	
+require_once __DIR__ . '/includes/conn.php';
+header('Cache-Control: no-store, private');
+header('Pragma: no-cache');
+if (empty($_SESSION['logcheck']) || empty($_SESSION['type']) || $_SESSION['type'] !== 'student' || empty($_SESSION['userID'])) {
+	header('Location: ../index.php');
+	exit;
+}
 ?>

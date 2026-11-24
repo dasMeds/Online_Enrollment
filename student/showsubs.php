@@ -1,159 +1,155 @@
 <?php
-session_start();
-include('includes/conn.php');
-include('logcheck.php');
-	$stid=$_SESSION['studnum'];
-				$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE studnum = '$stid'");
-				$rows=mysqli_fetch_array($getprofile);
-				
-if(isset($_POST['reg']))
-		{
-			$stid=$_SESSION['studnum'];
-			$values=$_POST['contents'];
-			$units=$_POST['units'];
-			
-				$insertenroll=mysqli_query($conn, "INSERT INTO student_subject VALUES('','$stid','$values','$units','0')");
-				echo"<script>window.alert('Enrollment form was successfully sent to the system')</script>";
-				echo"<script>window.location='studentindex.php'</script>";
-			
-			
-		}	
-		
-?>
-<html>
-	<head>
-	<script type="text/javascript">
-$('.confirm').live('click', function(){
-    return confirm("Are you sure?");
-});
-</script>
-	<SCRIPT LANGUAGE="JavaScript"> 
-if (window.print) {
-document.write('<form><input type=button name=print value="Print" onClick="window.print()"></form>');
+require_once __DIR__ . '/includes/conn.php';
+require_once __DIR__ . '/logcheck.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+	header('Location: enroll.php');
+	exit;
 }
-</script>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>Enrollment Form</title>
+app_verify_csrf();
 
-	<link href = "css/style2.css" rel = "stylesheet" type = "text/css"/>
-	<link rel="stylesheet" href="jquery-ui-1.10.4.custom/development-bundle/themes/base/jquery.ui.all.css">
-	<script src="jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
-	<script src="jquery-ui-1.10.4.custom/development-bundle/ui/jquery.ui.core.js"></script>
-	<script src="jquery-ui-1.10.4.custom/development-bundle/ui/jquery.ui.widget.js"></script>
-	<script src="jquery-ui-1.10.4.custom/development-bundle/ui/jquery.ui.datepicker.js"></script>
-	<link rel="stylesheet" href="jquery-ui-1.10.4.custom/development-bundle/demos/demos.css">
+$semester = isset($_POST['sem']) && in_array($_POST['sem'], array('1st Semester', '2nd Semester', 'Summer'), true) ? $_POST['sem'] : '';
+$rawIds = isset($_POST['reg']) ? (isset($_POST['subject_ids']) ? $_POST['subject_ids'] : array()) : (isset($_POST['subject']) ? $_POST['subject'] : array());
+$error = '';
+$subjects = array();
+$studentStatement = $conn->prepare('SELECT studnum, fname, minitial, lname, course, yearlvl FROM studenttbl WHERE accountID = ?');
+$studentStatement->bind_param('i', $_SESSION['userID']);
+$studentStatement->execute();
+$student = $studentStatement->get_result()->fetch_assoc();
 
-	
-	</head>
-	
-	<body>
-		
-		<div align='center'><img width='130' height='100' src='../logo.jpg'></div><div align='center' style='margin-top: 20px; font-family: Georgia, &quot;Times New Roman&quot;, Times, serif;'>John Paul College<br>MG ANDAYA COMPOUND<br>Odiong, Roxas, Oriental Mindoro, Philippines</div></div><br>
-		<div align='center' style='margin-top: 20px; font-family: Georgia, &quot;Times New Roman&quot;, Times, serif;'> UNOFFICIAL ENROLLMENT FORM 
-		</div>
-		<div align='center' style='margin-top: 0px; font-family: Georgia, &quot;Times New Roman&quot;, Times, serif;'> <?php echo "$_POST[sem]"; ?> School Year 2015 - 2016
-		</div>
-		<div align='center' width='600px' style='margin-top:30px;'><?php echo  "<b>Student Name: </b>$rows[fname] $rows[minitial] $rows[lname]|| <b>Course: </b>$rows[course]|| <b>Year Level: </b>$rows[yearlvl]" ;?>
-		
-		<table border="2" align='center' width='800'>
-		<tr>
-				<td align='left' colspan='3'><b>ENTRANCE FEE</b> </td><td colspan='3' align='right'>2,050.00</td>
-		</tr>
-		<tr>
-				<td width="300" align="center"><b>Tuition</b></td>
-				<td width="200" align="center"><b>Number of Units</b></td>
-				<td width="200" align="center"><b>Per Unit</b></td>
-				<td width="200" align="center"><b>Tutorial</b></td>
-				<td width="200" align="center"><b>Lab</b></td>
-				<td width="200" align="center"><b>Room</b></td>
-				<td width="200" align="center"><b>Day</b></td>
-				<td width="200" align="center"><b>Time</b></td>
-				<td width="200" align="center"><b>Instructor</b></td>
-				<td width="200" align="center"><b>Total</b></td>
+if (!$student) {
+	http_response_code(404);
+	exit('Student profile was not found. Please contact the administrator.');
+}
 
-			
-          </tr>
-              <tbody>
-			  <?php
-				
-				$alltext="";
-				$totalunits=0;
-				$totperlab=0;
-				foreach($_POST['subject'] as $item){
-			
-				$getcodes=mysqli_query($conn, "SELECT * FROM subjecttbl WHERE subjectcode='$item'");
-			
-				$alltext=$alltext.",".$item;
+$ids = array();
+if (is_array($rawIds)) {
+	foreach ($rawIds as $rawId) {
+		if (is_scalar($rawId) && ctype_digit((string)$rawId) && (int)$rawId > 0) {
+			$ids[] = (int)$rawId;
+		}
+	}
+}
+$ids = array_values(array_unique($ids));
+if (!$ids) {
+	$error = 'Select at least one subject to continue.';
+} elseif (!$semester) {
+	$error = 'Choose a valid semester.';
+} else {
+	$placeholders = implode(',', array_fill(0, count($ids), '?'));
+	$query = 'SELECT ID, subjectcode, subjecttitle, numofunits, room, day, time, instructor, islab, istutorial FROM subjecttbl WHERE course_con = ? AND semester = ? AND ID IN (' . $placeholders . ') ORDER BY subjectcode';
+	$statement = $conn->prepare($query);
+	$types = 'ss' . str_repeat('i', count($ids));
+	$params = array_merge(array($student['course'], $semester), $ids);
+	app_bind_params($statement, $types, $params);
+	$statement->execute();
+	$result = $statement->get_result();
+	while ($subject = $result->fetch_assoc()) {
+		$subjects[] = $subject;
+	}
+	if (count($subjects) !== count($ids)) {
+		$error = 'One or more selected subjects are no longer available for your course.';
+	}
+}
 
-				$subrow=mysqli_fetch_array($getcodes);
-				
-					echo"<tr>";
-						echo"<td align='center'>$subrow[subjectcode]</td>";
-						echo"<td align='center'>$subrow[numofunits]</td>";
-						echo"<td align='center'>296</td>";
-						if($subrow['islab']==1)
-						{
-							
-							$lab=1500;
-							$lab2="1500";
-							$totperlab=$totperlab+1500;
-						}
-						else
-						{
-							$lab=0;
-							$lab2="";
-						}
-						if($subrow['istutorial']==1)
-						{
-							$tut=1500;
-							$tut2="1500";
-							$totperlab=$totperlab+1500;
-						}
-						else
-						{
-							$tut=0;
-							$tut2="";
-						}
-							echo"<td align='center'>$tut2</td>";
-							echo"<td align='center'>$lab2</td>";
-							echo"<td align='center'>$subrow[room]</td>";
-							echo"<td align='center'>$subrow[day]</td>";
-							echo"<td align='center'>$subrow[time]</td>";
-							echo"<td align='center'>$subrow[instructor]</td>";
-						$totrow=$subrow['numofunits'] * 296;
-						echo"<td align='right'>$totrow.00</td>";
-						$totalunits=$totalunits + $subrow['numofunits'];
-					echo"</tr>";
-					
-				
-				}
-				$value=($totalunits * 296) + 2050 +150+50+$totperlab;				
-				echo"
-						<tr>
-							<td colspan='6'></td>
-						</tr>
-						<tr>
-							<td align='left' colspan='5'><b>INTERNET</b></td><td align='right'>150.00</td>
-						</tr>
-						<tr>
-							<td align='left' colspan='5'><b>MISC</b></td><td align='right'>50.00</td>
-						</tr>
-					<tr>
-						<td align='left'><b>Total units</td><td colspan='4' align='left'> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<b>$totalunits</b></td><td align='right' bgcolor='#00EE00'><b>P&nbsp&nbsp&nbsp&nbsp$value.00</b></td>
-					</tr>";
-			  ?>
-			</tbody>
+$totalUnits = 0;
+$extraFees = 0;
+$codes = array();
+foreach ($subjects as $subject) {
+	$totalUnits += (int)$subject['numofunits'];
+	$extraFees += ((int)$subject['islab'] + (int)$subject['istutorial']) * 1500;
+	$codes[] = $subject['subjectcode'];
+}
+
+if (isset($_POST['reg']) && $error === '') {
+	$subjectList = implode(',', $codes) . ',';
+	$schoolYear = date('Y') . '-' . (date('Y') + 1);
+	try {
+		$conn->begin_transaction();
+		$insert = $conn->prepare('INSERT INTO student_subject (studentID, subjects, totalunits, approved, semester, school_year, created_at) VALUES (?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP)');
+		$insert->bind_param('ssiss', $student['studnum'], $subjectList, $totalUnits, $semester, $schoolYear);
+		$insert->execute();
+		$enrollmentId = $conn->insert_id;
+		$itemInsert = $conn->prepare('INSERT INTO student_subject_items (enrollment_ID, subject_ID) VALUES (?, ?)');
+		foreach ($subjects as $subject) {
+			$subjectId = (int)$subject['ID'];
+			$itemInsert->bind_param('ii', $enrollmentId, $subjectId);
+			$itemInsert->execute();
+		}
+		$conn->commit();
+		unset($_SESSION['csrf_token']);
+		$_SESSION['flash_success'] = 'Your enrollment form was submitted successfully.';
+		header('Location: studentindex.php');
+		exit;
+	} catch (mysqli_sql_exception $exception) {
+		$conn->rollback();
+		error_log('Enrollment submission failed: ' . $exception->getMessage());
+		$error = $exception->getCode() === 1062
+			? 'An enrollment form has already been submitted for this semester and school year.'
+			: 'Your enrollment could not be submitted. Please try again.';
+	}
+}
+$schoolYear = date('Y') . '-' . (date('Y') + 1);
+
+$tuition = $totalUnits * 296;
+$total = $tuition + 2050 + 150 + 50 + $extraFees;
+?>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enrollment Preview | John Paul College</title>
+<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body class="enrollment-preview">
+<main class="shell">
+	<header class="enrollment-header">
+		<img src="../logo.jpg" width="130" height="100" alt="John Paul College">
+		<p>John Paul College<br>MG ANDAYA COMPOUND<br>Odiong, Roxas, Oriental Mindoro, Philippines</p>
+		<h1>Unofficial Enrollment Form</h1>
+		<p><?php echo app_h($semester); ?> &mdash; School Year <?php echo app_h($schoolYear); ?></p>
+		<p><strong>Student:</strong> <?php echo app_h($student['fname'] . ' ' . $student['minitial'] . ' ' . $student['lname']); ?>
+			&nbsp; <strong>Course:</strong> <?php echo app_h(strtoupper($student['course'])); ?>
+			&nbsp; <strong>Year:</strong> <?php echo app_h($student['yearlvl']); ?></p>
+	</header>
+	<?php if ($error !== '') { ?><p class="form-error" role="alert"><?php echo app_h($error); ?></p><p><a href="enroll.php">Return to subject selection</a></p><?php } ?>
+	<?php if ($subjects && $error === '') { ?>
+	<div class="table-wrap">
+	<table>
+		<thead><tr><th>Subject</th><th>Units</th><th>Per Unit</th><th>Tutorial</th><th>Lab</th><th>Room</th><th>Day</th><th>Time</th><th>Instructor</th><th>Total</th></tr></thead>
+		<tbody>
+		<?php foreach ($subjects as $subject) { ?>
+			<tr>
+				<td><?php echo app_h($subject['subjectcode']); ?></td>
+				<td><?php echo (int)$subject['numofunits']; ?></td>
+				<td>296.00</td>
+				<td><?php echo $subject['istutorial'] ? '1,500.00' : '-'; ?></td>
+				<td><?php echo $subject['islab'] ? '1,500.00' : '-'; ?></td>
+				<td><?php echo app_h($subject['room']); ?></td>
+				<td><?php echo app_h($subject['day']); ?></td>
+				<td><?php echo app_h($subject['time']); ?></td>
+				<td><?php echo app_h($subject['instructor']); ?></td>
+				<td><?php echo number_format((int)$subject['numofunits'] * 296, 2); ?></td>
+			</tr>
+		<?php } ?>
+		</tbody>
+		<tfoot>
+			<tr><th colspan="9">Entrance fee</th><td>2,050.00</td></tr>
+			<tr><th colspan="9">Internet</th><td>150.00</td></tr>
+			<tr><th colspan="9">Miscellaneous</th><td>50.00</td></tr>
+			<tr><th colspan="9">Total units: <?php echo $totalUnits; ?></th><th><?php echo number_format($total, 2); ?></th></tr>
+		</tfoot>
 	</table>
-			<form method="POST" > 
-			<div style='margin-top:20px;'><input type='submit' name='reg' value='Submit Enrollment Form' onClick="return confirm('Are you sure?, Form will be submitted to the system');"></div>
-		</div>
-		<div align='center' style='margin-top:500px;' >
-		
-			<input type='hidden' name='contents' value="<?php echo $alltext; ?>">
-			<input type='hidden' name='units' value="<?php echo $totalunits; ?>">
-		</form>
-		<input type='button' onclick='window.print()'>
-		</div>
-	</body>
-
+	</div>
+	<form method="post">
+		<input type="hidden" name="csrf_token" value="<?php echo app_h(app_csrf_token()); ?>">
+		<input type="hidden" name="sem" value="<?php echo app_h($semester); ?>">
+		<?php foreach ($ids as $id) { ?><input type="hidden" name="subject_ids[]" value="<?php echo (int)$id; ?>"><?php } ?>
+		<button type="submit" name="reg" value="1" onclick="return confirm('Submit this enrollment form?');">Submit enrollment form</button>
+		<button type="button" onclick="window.print()">Print</button>
+	</form>
+	<?php } ?>
+</main>
+</body>
 </html>

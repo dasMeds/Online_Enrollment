@@ -1,218 +1,116 @@
 <?php
-	session_start();
-	include('logcheck.php');
-	$getID=$_SESSION['userID'];
-	include('includes/conn.php');
-	
-	$getprofile=mysqli_query($conn, "SELECT * FROM studenttbl WHERE accountID = '$getID'");
-	$rows=mysqli_fetch_array($getprofile);
-	
-	$getacc=mysqli_query($conn, "SELECT * FROM usertbl WHERE ID = '$getID'");
-	$rowacc=mysqli_fetch_array($getacc);
-	
-		$username=$rowacc['username'];
-		$password=$rowacc['password'];
-		
-		$course=$rows['course'];
-		$yrlvlsec=$rows['yearlvl'];
-		$snum=$rows['studnum'];
-		
-		$fname=$rows['fname'];
-		$minitial=$rows['minitial'];
-		$lname=$rows['lname'];
-		$fullname= $fname." ".$minitial." ".$lname;
-		
-		$gender=$rows['gender'];
-		$bdate=$rows['birthdate'];
-		
-		$address=$rows['address'];
-		$cnum=$rows['contact'];
-		$email=$rows['emailaddress'];
-		
-		
-		$fathername=$rows['fathername'];
-		$mothername=$rows['mothername'];
-		$guardianname=$rows['guardianname'];
-		
-		$civilstatus=$rows['civilstatus'];
-		$bplace=$rows['birthplace'];
-		
-		$elemschool=$rows['elemschool'];
-		$yrelem=$rows['dategradelem'];
-		$hsschool=$rows['hsschool'];
-		$yrgradhs=$rows['datehsgrad'];
-		$lastschool=$rows['lastgrad'];
-		$yrlast=$rows['datelastgrad'];
-		$gradaddresslast=$rows['addresslastgrad'];
-	
-	
+require_once __DIR__ . '/includes/conn.php';
+require_once __DIR__ . '/logcheck.php';
+
+$accountId = (int)$_SESSION['userID'];
+$error = '';
+$success = '';
+$lookup = $conn->prepare('SELECT s.*, u.username FROM studenttbl s JOIN usertbl u ON u.ID = s.accountID WHERE s.accountID = ? AND u.user_type = "student"');
+$lookup->bind_param('i', $accountId);
+$lookup->execute();
+$student = $lookup->get_result()->fetch_assoc();
+if (!$student) {
+	http_response_code(404);
+	exit('Student profile was not found. Please contact the administrator.');
+}
+
+$editable = array('fname', 'minitial', 'lname', 'address', 'contact', 'emailaddress', 'birthdate', 'gender', 'fathername', 'mothername', 'guardianname', 'birthplace', 'civilstatus', 'elemschool', 'dategradelem', 'hsschool', 'datehsgrad', 'lastgrad', 'datelastgrad', 'addresslastgrad');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
+	app_verify_csrf();
+	$values = array();
+	foreach ($editable as $field) {
+		$values[$field] = trim(app_input($field));
+	}
+	if ($values['fname'] === '' || $values['lname'] === '') {
+		$error = 'First and last names are required.';
+	} elseif ($values['emailaddress'] !== '' && !filter_var($values['emailaddress'], FILTER_VALIDATE_EMAIL)) {
+		$error = 'Enter a valid email address.';
+	} elseif ($values['birthdate'] !== '' && !app_valid_date($values['birthdate'])) {
+		$error = 'Enter a valid birth date.';
+	} elseif (!in_array($values['gender'], array('', 'male', 'female', 'other'), true) || !in_array($values['civilstatus'], array('', 'single', 'married', 'widow'), true)) {
+		$error = 'Choose a valid gender and civil status.';
+	} else {
+		$limits = array('fname' => 100, 'minitial' => 20, 'lname' => 100, 'address' => 500, 'contact' => 30, 'emailaddress' => 254, 'gender' => 20, 'fathername' => 150, 'mothername' => 150, 'guardianname' => 150, 'birthplace' => 150, 'civilstatus' => 30, 'elemschool' => 150, 'dategradelem' => 20, 'hsschool' => 150, 'datehsgrad' => 20, 'lastgrad' => 150, 'datelastgrad' => 20, 'addresslastgrad' => 500);
+		foreach ($limits as $field => $limit) {
+			if (strlen($values[$field]) > $limit) {
+				$error = 'One or more profile fields are longer than allowed.';
+				break;
+			}
+		}
+	}
+	if ($error === '') {
+		$birthdate = $values['birthdate'] === '' ? null : $values['birthdate'];
+		$update = $conn->prepare('UPDATE studenttbl SET fname = ?, minitial = ?, lname = ?, address = ?, contact = ?, emailaddress = ?, birthdate = ?, gender = ?, fathername = ?, mothername = ?, guardianname = ?, birthplace = ?, civilstatus = ?, elemschool = ?, dategradelem = ?, hsschool = ?, datehsgrad = ?, lastgrad = ?, datelastgrad = ?, addresslastgrad = ? WHERE accountID = ?');
+		$update->bind_param('ssssssssssssssssssssi', $values['fname'], $values['minitial'], $values['lname'], $values['address'], $values['contact'], $values['emailaddress'], $birthdate, $values['gender'], $values['fathername'], $values['mothername'], $values['guardianname'], $values['birthplace'], $values['civilstatus'], $values['elemschool'], $values['dategradelem'], $values['hsschool'], $values['datehsgrad'], $values['lastgrad'], $values['datelastgrad'], $values['addresslastgrad'], $accountId);
+		$update->execute();
+		foreach ($values as $field => $value) {
+			$student[$field] = $value;
+		}
+		$success = 'Profile updated successfully.';
+		unset($_SESSION['csrf_token']);
+	}
+	if ($error !== '') {
+		foreach ($editable as $field) {
+			$student[$field] = app_input($field);
+		}
+	}
+}
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>John Paul College</title>
-
-
-<link href = "style.css" rel = "stylesheet" type = "text/css"/>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Profile | John Paul College</title>
+<link href="style.css" rel="stylesheet" type="text/css">
 </head>
-
 <body>
-
-<div class='header'>
-</div>
-	
-<nav class='container'>
-<?php
-include('includes/menu.php');
-?>
-</nav>
-
-
-
-
-
-<div id="main">
+<div class="header"></div>
+<nav class="container" aria-label="Student navigation"><?php include __DIR__ . '/includes/menu.php'; ?></nav>
+<main id="main">
 	<div class="shell">
-	<center>
-	<form class='cmxform' method='POST'>
-	<fieldset>
-			<legend><h4>Account Details</h4></legend>
-			  <ol>
-			  <li>
-				  <label for="name"> &nbsp;&nbsp; UserName: </label>
-				  <?php echo"<b>$username</b>";?>&nbsp;&nbsp; <a href='changepass.php'>Change Password</a>
-				</li>
-				
-  </ol>
-			
-	</fieldset>
-	
-	<fieldset>
-			<legend><h4>College Details</h4></legend>
-			  <ol>
-			  <li>
-				  <label for="name">Student Number: </label>
-				  <?php echo "<b>$snum</b>";  ?>
-				  <label for="name">Course: </label>
-				  <?php echo "<b>BSIT</b>";  ?>
-				  <label for="name">Section/Year Level: </label>
-				  <?php echo "<b>$yrlvlsec</b>";  ?>
-				</li>
-				
-			</ol>
-			
-	</fieldset>
-	
-	<fieldset>	
-			  <legend><h4>Personal Details</h4></legend>
-			  <ol>
-			  <li>
-					<table align='center'>
-						<tr>
-							<td>First Name: </td><td><?php echo "<b>$fname</b>&nbsp&nbsp&nbsp&nbsp&nbsp";  ?></td><td>Civil Status: </td>
-							<td><?php echo "<b>$civilstatus</b>";  ?></td>
-																																				
-						</tr>
-						<tr>
-							<td>Middle Initial: </td><td align='left'><?php echo "<b>$minitial</b>";  ?></td>
-							<td>Guardian's Name: </td><td align='left'><?php echo "<b>$guardianname</b>";  ?></td>
-						</tr>
-						<tr>
-							<td>Last Name: </td><td><?php echo "<b>$lname</b>";  ?></td>
-							<td>Father's Name:</td><td align='left'><?php echo "<b>$fathername</b>";  ?></td>
-						</tr>
-						<tr>
-							<td><label>Gender: </label></td><td align='left'><?php echo "<b>$gender</b>";  ?></td>
-							<td>Mother's Name:</td><td align='left'><?php echo "<b>$mothername</b>";  ?></td>
-						</tr>
-						<tr>
-							<td>BirthDate: </td><td><?php echo "<b>$bdate</b>";  ?></td><td>Birth Place:</td><td align='left'><?php echo "<b>$bplace</b>";  ?></td>
-						</tr>
-					</table>
-					
-				</li>
-						
-				
-			  <li>
-				  <label for="address1">Address: </label>
-				  <textarea readonly="readonly" name='address' height='500' width='200'><?php echo $address; ?></textarea>
-			</li>
-			  <li>
-				  <label for="address2">Contact Number: </label>
-				  <?php echo "<b>$cnum</b>";  ?>
-				</li>
-			  <li>
-				  <label for="town-city">Email Address</label>
-				  <?php echo "<b>$email</b>";  ?>
-				</li>
-				  </ol>
-				  </fieldset>
-				<fieldset>
-		<legend><h4>Educational Background</h4></legend>
-			  <ol>
-			  <li>
-				  <table>
-			
-						<tr>
-							<td>Elementary School: </td><td align='left'><?php echo "<b>$elemschool</b>";  ?></td>
-							<td>Year Graduated:</td><td align='left'><?php echo "<b>$yrelem</b>";  ?></td>
-						</tr>
-						<tr>
-							<td>High School:</td><td><?php echo "<b>$hsschool</b>";  ?></td>
-							<td>Year Graduated:</td><td align='left'><?php echo "<b>$yrgradhs</b>";  ?></td>
-						</tr>
-						<tr>
-							<td>School Last Attended:</td><td><?php echo "<b>$lastschool</b>";  ?></td>
-							<td>Year Graduated:</td><td align='left'><?php echo "<b>$yrlast</b>";  ?></td>
-						</tr>
-						<tr>
-							<td colspan='4' align='center'><label for="address1">Address<em>*</em></label>
-				  <textarea name='address2' height='500' width='200' readonly="readonly"><?php echo  $gradaddresslast; ?></textarea></td>
-						</tr>
-					</table>
-			</li>
-				
-			</ol>
-			
-	</fieldset>
-			  
-			  
-
-
-<div align='center'><input type='submit' name='register' value='Add new user'>&nbsp;&nbsp;
-<input type='reset' name='clear' value='Clear'></div>
-</form>
-</center>
+		<div class="page-heading"><h1>My Profile</h1><a class="button" href="changepass.php">Change password</a></div>
+		<?php if ($error !== '') { ?><p class="form-error" role="alert"><?php echo app_h($error); ?></p><?php } ?>
+		<?php if ($success !== '') { ?><p class="form-success" role="status"><?php echo app_h($success); ?></p><?php } ?>
+		<form class="cmxform profile-form" method="post">
+			<input type="hidden" name="csrf_token" value="<?php echo app_h(app_csrf_token()); ?>">
+			<fieldset>
+				<legend>Account and enrollment</legend>
+				<p><strong>Username:</strong> <?php echo app_h($student['username']); ?></p>
+				<p><strong>Student number:</strong> <?php echo app_h($student['studnum']); ?></p>
+				<p><strong>Course:</strong> <?php echo app_h(strtoupper($student['course'])); ?></p>
+				<p><strong>Year level / section:</strong> <?php echo app_h($student['yearlvl']); ?></p>
+			</fieldset>
+			<fieldset>
+				<legend>Personal details</legend>
+				<label for="fname">First name</label><input id="fname" name="fname" maxlength="100" value="<?php echo app_h($student['fname']); ?>" required>
+				<label for="minitial">Middle initial</label><input id="minitial" name="minitial" maxlength="20" value="<?php echo app_h($student['minitial']); ?>">
+				<label for="lname">Last name</label><input id="lname" name="lname" maxlength="100" value="<?php echo app_h($student['lname']); ?>" required>
+				<label for="birthdate">Birth date</label><input id="birthdate" name="birthdate" type="date" value="<?php echo app_h($student['birthdate']); ?>">
+				<label for="gender">Gender</label><select id="gender" name="gender"><option value="">Not specified</option><?php foreach (array('male' => 'Male', 'female' => 'Female', 'other' => 'Other') as $value => $label) { ?><option value="<?php echo app_h($value); ?>" <?php echo $student['gender'] === $value ? 'selected' : ''; ?>><?php echo app_h($label); ?></option><?php } ?></select>
+				<label for="civilstatus">Civil status</label><select id="civilstatus" name="civilstatus"><option value="">Not specified</option><?php foreach (array('single' => 'Single', 'married' => 'Married', 'widow' => 'Widowed') as $value => $label) { ?><option value="<?php echo app_h($value); ?>" <?php echo $student['civilstatus'] === $value ? 'selected' : ''; ?>><?php echo app_h($label); ?></option><?php } ?></select>
+				<label for="birthplace">Birth place</label><input id="birthplace" name="birthplace" maxlength="150" value="<?php echo app_h($student['birthplace']); ?>">
+				<label for="address">Address</label><textarea id="address" name="address" maxlength="500"><?php echo app_h($student['address']); ?></textarea>
+				<label for="contact">Contact number</label><input id="contact" name="contact" maxlength="30" value="<?php echo app_h($student['contact']); ?>">
+				<label for="emailaddress">Email address</label><input id="emailaddress" name="emailaddress" type="email" maxlength="254" value="<?php echo app_h($student['emailaddress']); ?>">
+			</fieldset>
+			<fieldset>
+				<legend>Family and education</legend>
+				<label for="fathername">Father's name</label><input id="fathername" name="fathername" maxlength="150" value="<?php echo app_h($student['fathername']); ?>">
+				<label for="mothername">Mother's name</label><input id="mothername" name="mothername" maxlength="150" value="<?php echo app_h($student['mothername']); ?>">
+				<label for="guardianname">Guardian's name</label><input id="guardianname" name="guardianname" maxlength="150" value="<?php echo app_h($student['guardianname']); ?>">
+				<label for="elemschool">Elementary school</label><input id="elemschool" name="elemschool" maxlength="150" value="<?php echo app_h($student['elemschool']); ?>">
+				<label for="dategradelem">Elementary graduation year</label><input id="dategradelem" name="dategradelem" maxlength="20" value="<?php echo app_h($student['dategradelem']); ?>">
+				<label for="hsschool">High school</label><input id="hsschool" name="hsschool" maxlength="150" value="<?php echo app_h($student['hsschool']); ?>">
+				<label for="datehsgrad">High school graduation year</label><input id="datehsgrad" name="datehsgrad" maxlength="20" value="<?php echo app_h($student['datehsgrad']); ?>">
+				<label for="lastgrad">School last attended</label><input id="lastgrad" name="lastgrad" maxlength="150" value="<?php echo app_h($student['lastgrad']); ?>">
+				<label for="datelastgrad">Last graduation year</label><input id="datelastgrad" name="datelastgrad" maxlength="20" value="<?php echo app_h($student['datelastgrad']); ?>">
+				<label for="addresslastgrad">Last school's address</label><textarea id="addresslastgrad" name="addresslastgrad" maxlength="500"><?php echo app_h($student['addresslastgrad']); ?></textarea>
+			</fieldset>
+			<button type="submit" name="save_profile" value="1">Save profile</button>
+		</form>
 	</div>
-	<div><br></div>
-</div>
-<!-- /Main -->
-
-<!-- Footer -->
-<div id="footer">
-	<div class="shell">
-		<!-- Mini Nav --> 
-		<div class="footer-navigation"> 
-		<?php
-			include('includes/menu2.php');
-		?>
-		</div> 
-		<!-- /Mini Nav --> 
-		
-		<!-- Copyrights --> 
-		<p class="right"> 
-			Copyright 2014 | Online Enrollment
-		</p> 
-		<!-- /Copyrights --> 
-		
-		<div class="cl">&nbsp;</div> 
-	</div>
-</div>
-
-
-
-
+</main>
+<footer id="footer"><div class="shell"><?php include __DIR__ . '/includes/menu2.php'; ?></div></footer>
 </body>
 </html>

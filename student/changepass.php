@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cpass'])) {
 	$statement->execute();
 	$account = $statement->get_result()->fetch_assoc();
 
-	if (!$account || !(password_verify($oldPassword, $account['password']) || hash_equals($account['password'], $oldPassword))) {
+	/* Password_verify only — the old plaintext fallback was removed. */
+	if (!$account || !password_verify($oldPassword, $account['password'])) {
 		$error = 'The current password is incorrect.';
 	} elseif (strlen($newPassword) < 12 || strlen($newPassword) > 72) {
 		$error = 'The new password must be between 12 and 72 characters.';
@@ -23,12 +24,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cpass'])) {
 		$error = 'The new password entries do not match.';
 	} else {
 		$hash = password_hash($newPassword, PASSWORD_DEFAULT);
-		$update = $conn->prepare('UPDATE usertbl SET password = ? WHERE ID = ? AND user_type = "student"');
-		$update->bind_param('si', $hash, $accountId);
-		$update->execute();
+		try {
+			$update = $conn->prepare('UPDATE usertbl SET password = ?, must_change_password = 0 WHERE ID = ? AND user_type = "student"');
+			$update->bind_param('si', $hash, $accountId);
+			$update->execute();
+		} catch (mysqli_sql_exception $exception) {
+			/* Pre-migration: no must_change_password column yet. */
+			$update = $conn->prepare('UPDATE usertbl SET password = ? WHERE ID = ? AND user_type = "student"');
+			$update->bind_param('si', $hash, $accountId);
+			$update->execute();
+		}
 		session_regenerate_id(true);
 		$success = 'Password updated successfully.';
 		unset($_SESSION['csrf_token']);
+		unset($_SESSION['must_change']);
 	}
 }
 ?>
@@ -46,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cpass'])) {
 <main id="main">
 	<div class="shell">
 		<h1>Change Password</h1>
+		<?php if (isset($_GET['forced']) || !empty($_SESSION['must_change'])) { ?><p class="form-success" role="status">Your account was created with a temporary password. Please set your own password now — you will not be able to use the site until you do.</p><?php } ?>
 		<?php if ($error !== '') { ?><p class="form-error" role="alert"><?php echo app_h($error); ?></p><?php } ?>
 		<?php if ($success !== '') { ?><p class="form-success" role="status"><?php echo app_h($success); ?></p><?php } ?>
 		<form class="cmxform" method="post">

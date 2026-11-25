@@ -9,11 +9,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 app_verify_csrf();
 $studentId = app_int_input('student_id');
 if ($studentId > 0) {
-	$lookup = $conn->prepare('SELECT accountID FROM studenttbl WHERE ID = ?');
+	$lookup = $conn->prepare('SELECT accountID, studnum, fname, lname FROM studenttbl WHERE ID = ?');
 	$lookup->bind_param('i', $studentId);
 	$lookup->execute();
 	$student = $lookup->get_result()->fetch_assoc();
 	if ($student) {
+		/* The delete cascades to the student's enrollments, payments and
+		   documents. Log it first — after the delete there is nothing left
+		   to describe. */
+		app_audit($conn, 'student_delete', 'student', (string)$studentId, 'Deleted student ' . $student['studnum'] . ' (' . $student['lname'] . ', ' . $student['fname'] . '); enrollments, payments and documents cascade-deleted.');
 		$delete = $conn->prepare('DELETE FROM usertbl WHERE ID = ? AND user_type = "student"');
 		$delete->bind_param('i', $student['accountID']);
 		$delete->execute();

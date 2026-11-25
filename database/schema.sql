@@ -1,6 +1,9 @@
--- Fresh-install schema for the Online Enrollment application.
--- Existing password values are legacy plaintext samples; the login flow hashes
--- each password after its first successful sign-in.
+-- Fresh-install schema for the Online Enrollment application (clean v2.1).
+-- All stored password values are password_hash() hashes. There is no
+-- plaintext-password fallback in clean v2.1: if an old account still has a
+-- plaintext password, its owner must use "Forgot password" to reset it.
+-- Idempotent: CREATE TABLE IF NOT EXISTS / INSERT IGNORE throughout, so
+-- re-importing is safe (it will not duplicate or wipe existing rows).
 CREATE DATABASE IF NOT EXISTS `online_enroll`
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `online_enroll`;
@@ -21,6 +24,8 @@ CREATE TABLE IF NOT EXISTS `usertbl` (
   `password` VARCHAR(255) NOT NULL,
   `fullname` VARCHAR(150) NOT NULL,
   `user_type` ENUM('admin', 'student') NOT NULL,
+  `must_change_password` TINYINT(1) NOT NULL DEFAULT 0,
+  `email` VARCHAR(254) NOT NULL DEFAULT '',
   PRIMARY KEY (`ID`),
   UNIQUE KEY `uq_usertbl_username` (`username`),
   KEY `idx_usertbl_type` (`user_type`)
@@ -46,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `subjecttbl` (
   `subjectcode` VARCHAR(30) NOT NULL,
   `subjecttitle` VARCHAR(150) NOT NULL,
   `numofunits` TINYINT UNSIGNED NOT NULL,
+  `capacity` SMALLINT UNSIGNED NOT NULL DEFAULT 40,
   `room` VARCHAR(100) NOT NULL DEFAULT '',
   `time` VARCHAR(100) NOT NULL DEFAULT '',
   `instructor` VARCHAR(150) NOT NULL DEFAULT '',
@@ -128,13 +134,27 @@ CREATE TABLE IF NOT EXISTS `student_subject` (
   `subjects` TEXT NOT NULL,
   `totalunits` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   `approved` TINYINT(1) NOT NULL DEFAULT 0,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `review_note` TEXT NULL DEFAULT NULL,
+  `reviewed_at` DATETIME NULL DEFAULT NULL,
+  `reviewed_by` INT UNSIGNED NULL DEFAULT NULL,
+  `tuition_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `entrance_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `internet_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `misc_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `lab_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `tutorial_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `total_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `semester` ENUM('1st Semester', '2nd Semester', 'Summer') NOT NULL DEFAULT '1st Semester',
   `school_year` VARCHAR(9) NOT NULL DEFAULT '',
+  `term_id` INT UNSIGNED NULL DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`),
   UNIQUE KEY `uq_enrollment_student_term` (`studentID`, `semester`, `school_year`),
   KEY `idx_enrollment_student_date` (`studentID`, `created_at`),
   KEY `idx_enrollment_created_at` (`created_at`, `ID`),
+  KEY `idx_student_subject_status` (`status`),
+  KEY `idx_student_subject_term` (`term_id`),
   CONSTRAINT `fk_enrollment_student` FOREIGN KEY (`studentID`)
     REFERENCES `studenttbl` (`studnum`) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT `chk_enrollment_approved` CHECK (`approved` IN (0, 1))
@@ -151,6 +171,161 @@ CREATE TABLE IF NOT EXISTS `student_subject_items` (
     REFERENCES `student_subject` (`ID`) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT `fk_enrollment_item_subject` FOREIGN KEY (`subject_ID`)
     REFERENCES `subjecttbl` (`ID`) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Settings (fees, enrollment period, unit limit) — v1.
+CREATE TABLE IF NOT EXISTS `app_settings` (
+  `setting_key` VARCHAR(100) NOT NULL,
+  `setting_value` VARCHAR(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `app_settings` (`setting_key`, `setting_value`) VALUES
+  ('enrollment_open', '1'),
+  ('enrollment_start', ''),
+  ('enrollment_end', ''),
+  ('max_units', '24'),
+  ('fee_per_unit', '296'),
+  ('fee_entrance', '2050'),
+  ('fee_internet', '150'),
+  ('fee_misc', '50'),
+  ('fee_lab', '1500'),
+  ('fee_tutorial', '1500');
+
+-- Announcements — v1.
+CREATE TABLE IF NOT EXISTS `announcements` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(200) NOT NULL,
+  `body` TEXT NOT NULL,
+  `is_published` TINYINT(1) NOT NULL DEFAULT 0,
+  `starts_at` DATETIME NULL DEFAULT NULL,
+  `ends_at` DATETIME NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  KEY `idx_announcements_published` (`is_published`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `announcements` (`ID`, `title`, `body`, `is_published`) VALUES
+  (1, 'Enrollment is open', 'Enrollment for the current term is now open. Choose your subjects, submit your form, and check your status here.', 1);
+
+-- Payments against an enrollment assessment — v1.
+CREATE TABLE IF NOT EXISTS `enrollment_payments` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `enrollment_ID` INT UNSIGNED NOT NULL,
+  `amount` DECIMAL(10,2) NOT NULL,
+  `method` ENUM('cash', 'gcash', 'bank', 'maya', 'other') NOT NULL DEFAULT 'cash',
+  `reference` VARCHAR(100) NOT NULL DEFAULT '',
+  `paid_at` DATE NULL DEFAULT NULL,
+  `receipt_path` VARCHAR(255) NOT NULL DEFAULT '',
+  `status` ENUM('pending', 'verified', 'rejected') NOT NULL DEFAULT 'pending',
+  `note` TEXT NULL DEFAULT NULL,
+  `recorded_by` INT UNSIGNED NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  KEY `idx_payments_enrollment` (`enrollment_ID`),
+  KEY `idx_payments_status` (`status`),
+  CONSTRAINT `fk_payments_enrollment` FOREIGN KEY (`enrollment_ID`)
+    REFERENCES `student_subject` (`ID`) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `chk_payment_amount` CHECK (`amount` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Student documents — v1.
+CREATE TABLE IF NOT EXISTS `student_documents` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `accountID` INT UNSIGNED NOT NULL,
+  `studnum` VARCHAR(20) NOT NULL DEFAULT '',
+  `doc_type` ENUM('id', 'psa_birth', 'tor', 'form137', 'photo', 'other') NOT NULL DEFAULT 'other',
+  `file_path` VARCHAR(255) NOT NULL,
+  `original_name` VARCHAR(255) NOT NULL DEFAULT '',
+  `mime` VARCHAR(100) NOT NULL DEFAULT '',
+  `size_bytes` INT UNSIGNED NOT NULL DEFAULT 0,
+  `status` ENUM('pending', 'verified', 'rejected') NOT NULL DEFAULT 'pending',
+  `note` TEXT NULL DEFAULT NULL,
+  `uploaded_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  KEY `idx_documents_account` (`accountID`),
+  KEY `idx_documents_status` (`status`),
+  CONSTRAINT `fk_documents_account` FOREIGN KEY (`accountID`)
+    REFERENCES `usertbl` (`ID`) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Terms. The current term is the single source of truth for the school
+-- year / semester (kept from v3; fixes the January-2027 bug). — v2.1.
+CREATE TABLE IF NOT EXISTS `terms` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `school_year` VARCHAR(9) NOT NULL,
+  `semester` ENUM('1st Semester', '2nd Semester', 'Summer') NOT NULL,
+  `start_date` DATE NULL DEFAULT NULL,
+  `end_date` DATE NULL DEFAULT NULL,
+  `is_current` TINYINT(1) NOT NULL DEFAULT 0,
+  `enrollment_open` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  UNIQUE KEY `uq_terms_year_semester` (`school_year`, `semester`),
+  KEY `idx_terms_current` (`is_current`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `terms` (`school_year`, `semester`, `start_date`, `end_date`, `is_current`, `enrollment_open`) VALUES
+('2025-2026', '2nd Semester', '2026-01-05', '2026-05-29', 0, 0),
+('2026-2027', '1st Semester', '2026-08-03', '2026-12-19', 1, 1),
+('2026-2027', '2nd Semester', '2027-01-04', '2027-05-28', 0, 1),
+('2026-2027', 'Summer', '2027-06-07', '2027-07-30', 0, 1);
+
+-- Login rate limiting (5 failed attempts / 15 min per username+IP) — v2.1.
+CREATE TABLE IF NOT EXISTS `login_attempts` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(50) NOT NULL,
+  `ip_address` VARCHAR(45) NOT NULL,
+  `attempted_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  KEY `idx_login_attempts_user_ip` (`username`, `ip_address`, `attempted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Password reset tokens (selector + hashed token, 1-hour expiry) — v2.1.
+CREATE TABLE IF NOT EXISTS `password_resets` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `accountID` INT UNSIGNED NOT NULL,
+  `selector` CHAR(16) NOT NULL,
+  `token_hash` CHAR(64) NOT NULL,
+  `expires_at` DATETIME NOT NULL,
+  `used` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  UNIQUE KEY `uq_password_resets_selector` (`selector`),
+  KEY `idx_password_resets_account` (`accountID`),
+  CONSTRAINT `fk_password_resets_account` FOREIGN KEY (`accountID`)
+    REFERENCES `usertbl` (`ID`) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- In-app notifications — v2.1.
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `accountID` INT UNSIGNED NOT NULL,
+  `type` VARCHAR(50) NOT NULL DEFAULT 'general',
+  `title` VARCHAR(200) NOT NULL,
+  `body` TEXT NOT NULL,
+  `link` VARCHAR(255) NOT NULL DEFAULT '',
+  `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  KEY `idx_notifications_account` (`accountID`, `is_read`, `created_at`),
+  CONSTRAINT `fk_notifications_account` FOREIGN KEY (`accountID`)
+    REFERENCES `usertbl` (`ID`) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Audit log — v2.1.
+CREATE TABLE IF NOT EXISTS `audit_log` (
+  `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `actor_userID` INT UNSIGNED NULL DEFAULT NULL,
+  `actor_role` VARCHAR(20) NOT NULL DEFAULT '',
+  `action` VARCHAR(100) NOT NULL,
+  `target_type` VARCHAR(50) NOT NULL DEFAULT '',
+  `target_id` VARCHAR(50) NOT NULL DEFAULT '',
+  `details` TEXT NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ID`),
+  KEY `idx_audit_created` (`created_at`),
+  KEY `idx_audit_actor` (`actor_userID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO `courses_tbl` (`course_ID`, `course_code`, `course_title`, `course_desc`) VALUES
@@ -362,3 +537,10 @@ SELECT e.`ID`, s.`ID`
 FROM `student_subject` e
 JOIN `subjecttbl` s ON FIND_IN_SET(s.`subjectcode`, e.`subjects`) > 0
 WHERE e.`ID` BETWEEN 101 AND 112;
+
+-- Link the seeded enrollments to their term (fresh installs only; the
+-- migration does the same for existing installs).
+UPDATE `student_subject` e
+JOIN `terms` t ON t.`school_year` = e.`school_year` AND t.`semester` = e.`semester`
+SET e.`term_id` = t.`ID`
+WHERE e.`term_id` IS NULL;

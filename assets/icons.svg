@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#24633d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Online Enrollment">
+<defs>
+<symbol id="icon-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#e5f6ec" stroke="#24633d" stroke-width="2"/><path d="M8 12.5 L11 15.5 L16 9" fill="none" stroke="#24633d" stroke-width="2"/></symbol>
+<symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#fff4d9" stroke="#795914" stroke-width="2"/><path d="M12 7 L12 12 L15.5 14" fill="none" stroke="#795914" stroke-width="2"/></symbol>
+<symbol id="icon-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#fde8e8" stroke="#7a1f1f" stroke-width="2"/><path d="M9 9 L15 15 M15 9 L9 15" fill="none" stroke="#7a1f1f" stroke-width="2"/></symbol>
+<symbol id="icon-doc" viewBox="0 0 24 24"><path d="M6 3 H14 L18 7 V21 H6 Z" fill="#edf5ee" stroke="#24633d" stroke-width="2"/><path d="M14 3 V7 H18" fill="none" stroke="#24633d" stroke-width="2"/><path d="M9 12 H15 M9 16 H15" fill="none" stroke="#24633d" stroke-width="2"/></symbol>
+<symbol id="icon-money" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2" fill="#e5f6ec" stroke="#24633d" stroke-width="2"/><circle cx="12" cy="12.5" r="3" fill="none" stroke="#24633d" stroke-width="2"/><path d="M6 10.5 H6.01 M18 15 H18.01" fill="none" stroke="#24633d" stroke-width="2"/></symbol>
+<symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2" fill="#edf5ee" stroke="#24633d" stroke-width="2"/><path d="M4 10 H20 M8 3 V7 M16 3 V7" fill="none" stroke="#24633d" stroke-width="2"/></symbol>
+<symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3 L22 20 H2 Z" fill="#fff4d9" stroke="#795914" stroke-width="2"/><path d="M12 10 V14 M12 17 V17.01" fill="none" stroke="#795914" stroke-width="2"/></symbol>
+<symbol id="icon-print" viewBox="0 0 24 24"><path d="M7 8 V3 H17 V8" fill="none" stroke="#24633d" stroke-width="2"/><rect x="4" y="8" width="16" height="8" rx="2" fill="#edf5ee" stroke="#24633d" stroke-width="2"/><path d="M7 13 H17 V21 H7 Z" fill="#ffffff" stroke="#24633d" stroke-width="2"/></symbol>
+</defs>
+<use href="#icon-check" x="0" y="0" width="64" height="64"/>
+</svg>

@@ -17,6 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 	$sinstructor = trim(app_input('sinstructor'));
 	$islab = isset($_POST['islab']) ? 1 : 0;
 	$istutorial = isset($_POST['istutorial']) ? 1 : 0;
+	$capacity = app_int_input('capacity', 40);
+	if ($capacity < 0 || $capacity > 500) {
+		$capacity = 40;
+	}
 
 	$lengthLimits = array(array($scode, 30), array($stitle, 150), array($sroom, 100), array($stime, 100), array($sinstructor, 150), array($sday, 50));
 	foreach ($lengthLimits as $field) {
@@ -30,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 	}
 	if ($error === '') {
 		try {
-			$insert = $conn->prepare('INSERT INTO subjecttbl (subjectcode, subjecttitle, numofunits, room, time, instructor, day, islab, istutorial, description, course_con, semester) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-			$insert->bind_param('ssissssiiiss', $scode, $stitle, $numunits, $sroom, $stime, $sinstructor, $sday, $islab, $istutorial, $sdescription, $course, $semester);
+			$insert = $conn->prepare('INSERT INTO subjecttbl (subjectcode, subjecttitle, numofunits, capacity, room, time, instructor, day, islab, istutorial, description, course_con, semester) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+			$insert->bind_param('ssiissssiiiss', $scode, $stitle, $numunits, $capacity, $sroom, $stime, $sinstructor, $sday, $islab, $istutorial, $sdescription, $course, $semester);
 			$insert->execute();
 			$_SESSION['flash_success'] = 'Subject added.';
 			header('Location: subjectreg.php');
@@ -68,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 					<label for="scode">Subject code<input id="scode" name="scode" maxlength="30" required></label>
 					<label for="stitle">Subject title<input id="stitle" name="stitle" maxlength="150" required></label>
 					<label for="numunits">Units<select id="numunits" name="numunits" required><?php for ($units = 1; $units <= 6; $units++) { ?><option value="<?php echo $units; ?>"><?php echo $units; ?></option><?php } ?></select></label>
+					<label for="capacity">Seat capacity<input id="capacity" name="capacity" type="number" min="0" max="500" value="40"></label>
 					<label for="sroom">Room<input id="sroom" name="sroom" maxlength="100"></label>
 					<label for="sday">Day<input id="sday" name="sday" maxlength="50"></label>
 					<label for="stime">Time<input id="stime" name="stime" maxlength="100"></label>

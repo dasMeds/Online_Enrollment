@@ -1,9 +1,8 @@
-:root {
-	--ink: #203841;
-	--brand: #246c68;
-	--brand-dark: #185651;
-	--line: #d5e0e3;
-}
+/* Online Enrollment — clean v2.1.
+   Login pages (index.php, forgot.php, reset.php). Shared tokens and
+   components come from ../assets/css/design.css; this file keeps only
+   the login-page rules. The @import must stay the first line. */
+@import url('../assets/css/design.css');
 
 * { box-sizing: border-box; }
 body {
@@ -12,71 +11,85 @@ body {
 	margin: 0;
 	padding: 24px;
 	place-items: center;
-	background: linear-gradient(135deg, rgba(15,35,45,.76), rgba(15,35,45,.3)), url('../dommc.jpg') center / cover fixed no-repeat;
+	background:
+		linear-gradient(160deg, rgba(15, 42, 68, .88), rgba(14, 116, 144, .62) 60%, rgba(15, 42, 68, .78)),
+		url('../assets/dommc.jpg') center / cover fixed no-repeat;
 	color: var(--ink);
-	font: 16px/1.5 Arial, Helvetica, sans-serif;
+	font: 16px/1.6 var(--font);
 }
-a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #e4a63a; outline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #d97706; outline-offset: 2px; border-radius: 4px; }
+
+
 .loginForm {
 	position: relative;
 	width: min(100%, 460px);
-	padding: 30px;
-	border: 1px solid rgba(255,255,255,.75);
-	border-radius: 18px;
-	background: rgba(255,255,255,.97);
-	box-shadow: 0 24px 70px rgba(10,25,32,.32);
+	padding: 32px;
+	border: 1px solid rgba(255, 255, 255, .75);
+	border-radius: var(--radius-lg);
+	background: rgba(255, 255, 255, .97);
+	box-shadow: 0 10px 28px rgba(10, 25, 32, .28), 0 24px 70px rgba(10, 25, 32, .28);
+	animation: ui-fade-up var(--dur-slow) var(--ease) both;
 }
 .loginForm h1 {
 	display: flex;
 	min-height: 78px;
 	align-items: center;
 	justify-content: center;
-	margin: 0 0 24px;
+	margin: 0 0 8px;
 	padding-left: 96px;
-	color: #183e4b;
+	color: var(--navy);
 	font-size: 26px;
+	letter-spacing: -.01em;
 }
-.login-intro { margin: -12px 0 20px; color: #647780; text-align: center; }
+.login-intro { margin: 0 0 22px; color: var(--muted); text-align: center; }
 .loginForm form > div:nth-of-type(1) {
 	position: absolute;
-	top: 30px;
-	left: 30px;
+	top: 32px;
+	left: 32px;
 	margin: 0 !important;
 }
 .loginForm form > div:nth-of-type(1) img { display: block; width: 78px; height: 78px; object-fit: contain; }
 .loginForm form > div:last-child { margin: 0 !important; }
 .loginForm form br { display: none; }
-.loginForm form b { display: block; margin: 0 0 7px; color: #344b53; font-size: 14px; font-weight: 600; }
+.loginForm form b { display: block; margin: 0 0 7px; color: #334155; font-size: 14px; font-weight: 600; }
 .loginForm input.text {
 	display: block;
 	width: 100%;
 	height: 48px;
 	margin: 0 0 18px;
 	padding: 0 14px;
-	border: 1px solid var(--line);
+	border: 1px solid var(--line-strong);
 	border-radius: 9px;
-	background: #f8fbfc;
+	background: #f8fafc;
 	color: var(--ink);
-	font: 15px Arial, Helvetica, sans-serif;
+	font: 15px var(--font);
+	transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-.loginForm input.text:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(36,108,104,.16); }
+.loginForm input.text:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
 .loginForm input.btn {
 	width: 100%;
 	min-height: 48px;
 	margin-top: 4px;
 	border: 0;
 	border-radius: 9px;
-	background: var(--brand);
+	background: var(--accent);
 	color: #fff;
 	cursor: pointer;
-	font: 600 15px Arial, Helvetica, sans-serif;
+	font: 600 15px var(--font);
+	transition: background-color var(--dur) ease, transform var(--dur) ease, box-shadow var(--dur) ease;
 }
-.loginForm input.btn:hover { background: var(--brand-dark); }
-.form-error { padding: 11px 13px; border: 1px solid #f0c6c6; border-radius: 8px; background: #fff2f2; color: #842127; }
+.loginForm input.btn:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15, 42, 68, .18); }
+.loginForm input.btn:active { transform: translateY(0); }
+
 @media (max-width: 480px) {
 	body { padding: 16px; }
 	.loginForm { padding: 24px; }
-	.loginForm h1 { min-height: 68px; margin-bottom: 20px; padding-left: 78px; font-size: 22px; }
+	.loginForm h1 { min-height: 68px; margin-bottom: 6px; padding-left: 78px; font-size: 22px; }
 	.loginForm form > div:nth-of-type(1) { top: 24px; left: 24px; }
 	.loginForm form > div:nth-of-type(1) img { width: 64px; height: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+	.loginForm, .form-error, .form-success { animation: none; }
 }

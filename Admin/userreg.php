@@ -41,7 +41,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 						<td><?php echo app_h(strtoupper($user['course'])); ?></td>
 						<td><?php echo app_h($user['yearlvl']); ?></td>
 						<td>
-							<form method="post" action="deletecurruser.php" class="inline-form" onsubmit="return confirm('Delete this student account and its enrollment records?');">
+							<form method="post" action="deletecurruser.php" class="inline-form" onsubmit="return confirm('Delete this student account? All of their enrollment forms, payments and documents are deleted with it (the database cascade). This cannot be undone.');">
 								<input type="hidden" name="csrf_token" value="<?php echo app_h(app_csrf_token()); ?>">
 								<input type="hidden" name="student_id" value="<?php echo (int)$user['ID']; ?>">
 								<button class="button button-danger" type="submit">Delete</button>

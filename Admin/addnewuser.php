@@ -64,9 +64,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 	if ($error === '') {
 		try {
 			$conn->begin_transaction();
-			$accountInsert = $conn->prepare('INSERT INTO usertbl (username, password, fullname, user_type) VALUES (?, ?, ?, "student")');
-			$passwordHash = password_hash($password, PASSWORD_DEFAULT);
-			$accountInsert->bind_param('sss', $username, $passwordHash, $fullname);
+			/* Admin-created accounts start with a temporary password: the
+			   student must change it on first login, and the email is stored
+			   so password reset works. */
+			try {
+				$accountInsert = $conn->prepare('INSERT INTO usertbl (username, password, fullname, user_type, email, must_change_password) VALUES (?, ?, ?, "student", ?, 1)');
+				$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+				$accountInsert->bind_param('ssss', $username, $passwordHash, $fullname, $email);
+			} catch (mysqli_sql_exception $exception) {
+				/* Pre-migration: no email / must_change_password columns yet. */
+				$accountInsert = $conn->prepare('INSERT INTO usertbl (username, password, fullname, user_type) VALUES (?, ?, ?, "student")');
+				$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+				$accountInsert->bind_param('sss', $username, $passwordHash, $fullname);
+			}
 			$accountInsert->execute();
 			$accountId = $conn->insert_id;
 
@@ -74,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 			$studentInsert->bind_param('i' . str_repeat('s', 23), $accountId, $snum, $fname, $minitial, $lname, $address, $cnum, $email, $bdate, $course, $yrlvlsec, $gender, $fathername, $mothername, $guardianname, $bplace, $civilstatus, $elemschool, $yrelem, $hsschool, $yrgradhs, $lastschool, $yrlast, $gradaddresslast);
 			$studentInsert->execute();
 			$conn->commit();
-			$_SESSION['flash_success'] = 'Student account created.';
+			app_audit($conn, 'user_create', 'student', (string)$accountId, 'Created student account ' . $username . ' (' . $snum . ', ' . $fullname . ').');
+			$_SESSION['flash_success'] = 'Student account created. The student must change the temporary password on first login.';
 			header('Location: userreg.php');
 			exit;
 		} catch (mysqli_sql_exception $exception) {
